@@ -121,7 +121,6 @@ int main(int argc, char *argv[]) {
 
     BasisSet obs(basisname, atoms);
 
-
     size_t nao = 0;
     for (auto s=0; s<obs.size(); ++s)
       nao += obs[s].size();
@@ -246,20 +245,11 @@ int main(int argc, char *argv[]) {
     } while (((fabs(ediff) > conv) || (fabs(rmsd) > conv)) && (iter < maxiter));
 
     // ####### Begin MP2 stuff
-    //std::vector<double> ao_ints = ao_integrals_vector(obs);
-    //std::cout << ao_ints << "\n";
-
-    //std::cout << "Length of ao_ints vector: " << ao_ints.size() << "\n";
-    //double total_vector_sum = 0.0;
-    //double total_tensor_sum = 0.0;
-
     btas::Tensor<double> v_ao = rei_ao_integrals_tensor(obs);
     auto ia_jb = transform_pqrs_to_iajb(C, v_ao, ndocc);
     auto mp2_e_ten = mp2_energy(ia_jb, ndocc, nao, eps);
-    std::cout << "Finished MP2\n";
 
     auto nuocc = nao - ndocc;
-    std::cout << "At assignment: nuocc: " << nuocc << "\t nao: " << nao << "\tobs.size(): " << obs.size() << "\tndocc: " << ndocc << std::endl;
 
     // CCD loop
     btas::Tensor<double> v_oo_oo(ndocc, ndocc, ndocc, ndocc);
@@ -333,12 +323,10 @@ int main(int argc, char *argv[]) {
     double ccd_energy = 0.0;
     double e_change = 0.0;
     rmsd = 0.0; //TODO: make independent variable for this?
-    std::cout << "n: " << nao << "\tndocc: " << ndocc << "\tnuocc: " << nuocc << "\n";
-    btas::Tensor<double> t_ij_ab(ndocc, ndocc, nuocc, nuocc); // dimensions?
+    btas::Tensor<double> t_ij_ab(ndocc, ndocc, nuocc, nuocc);
     btas::Tensor<double> t_ij_ab_trans(ndocc, nuocc, ndocc, nuocc);
     t_ij_ab.fill(0);
     t_ij_ab_trans.fill(0);
-    //btas::Tensor<double> D_tensor(ndocc, ndocc, nuocc, nuocc);
     btas::Tensor<double> I_bj_ia(ndocc, nuocc, ndocc, nuocc);
     btas::Tensor<double> I_jb_ia(ndocc, nuocc, ndocc, nuocc);
     btas::Tensor<double> I_kl_ij(ndocc, nuocc, ndocc, nuocc);
@@ -360,25 +348,16 @@ int main(int argc, char *argv[]) {
     }
 
     do {
-        //printf("%2i, %2i, %2i, %2i\n", v_ao.extent(0), v_ao.extent(1), v_ao.extent(2), v_ao.extent(3));
         ++cc_iter;
         auto ccd_energy_last = ccd_energy;
         auto t_ij_ab_last = t_ij_ab;
 
-        //std::cout << "Entered CCD loop\n";
         I_bj_ia = make_I_bj_ia(v_uo_ou, v_uu_oo, t_ij_ab, ndocc, nao);
-        //std::cout << "Made D and I_ia_bj\n";
-        I_jb_ia = make_I_jb_ia(v_ou_ou, v_uu_oo, t_ij_ab, ndocc, nao); // working
-        //std::cout << "Made D and I_ia_jb\n";
+        I_jb_ia = make_I_jb_ia(v_ou_ou, v_uu_oo, t_ij_ab, ndocc, nao);
         I_kl_ij = make_I_kl_ij(v_oo_oo, v_uu_oo, t_ij_ab, ndocc, nao);
-        //std::cout << "Made D and I's with four indices\n";
         I_j_i = make_I_j_i(v_uu_oo, t_ij_ab, ndocc, nao);
-        //std::cout << "Made I_j_i\n";
         I_b_a = make_I_b_a(v_uu_oo, t_ij_ab, ndocc, nao);
-        //std::cout << "Made I_b_a\n";
         Dt = cc_amps_update(v_oo_uu, v_uu_uu, t_ij_ab, I_b_a, I_j_i, I_kl_ij, I_jb_ia, I_bj_ia, nao, ndocc);
-        //printf("Dt extent: %2i, %2i, %2i, %2i\n", Dt.extent(0), Dt.extent(1), Dt.extent(2), Dt.extent(3));
-        //printf("D_tensor extent: %2i, %2i, %2i, %2i\n", D_tensor.extent(0), D_tensor.extent(1), D_tensor.extent(2), D_tensor.extent(3));
 
         for (int i = 0; i != ndocc; ++i) {
             for (int j = 0; j != ndocc; ++j) {
@@ -389,20 +368,14 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
-        //printf("Dt_trans extent: %2i, %2i, %2i, %2i\n", Dt_trans.extent(0), Dt_trans.extent(1), Dt_trans.extent(2), Dt_trans.extent(3));
-        //printf("D_tensor_trans extent: %2i, %2i, %2i, %2i\n", D_tensor_trans.extent(0), D_tensor_trans.extent(1), D_tensor_trans.extent(2), D_tensor_trans.extent(3));
         //Dt.in_place_transpose(1, 2);
         //D_tensor.in_place_transpose(1, 2);
-
-        //btas::Tensor<double>Dt_trans;
         //btas::transpose(1, 2, Dt, 1, Dt_trans, 1);
 
         // assuming D(i, a, j, b)
         auto i_extent = ndocc;
         auto a_extent = nuocc;//D_tensor_trans.extent(0), a_extent = D_tensor_trans.extent(1);
         auto ai_extent = a_extent * i_extent;
-        //auto i2_extent = i_extent * i_extent;
-        //auto a2_extent = a_extent * a_extent;
         btas::Range r_ai_mat({btas::Range1{ai_extent}, btas::Range1{ai_extent}}), r_tensor = Dt_trans.range();
         //btas::Range r_ai_mat({btas::Range1{i2_extent}, btas::Range1{a2_extent}}), r_tensor = D_tensor.range();
         D_tensor_trans.resize(r_ai_mat); // D(i, j, a, b) -> D(ia, jb)
@@ -416,28 +389,14 @@ int main(int argc, char *argv[]) {
                 bool fast_inv = false;
                 btas::pseudoInverse(D_tensor_trans, fast_inv);
             }
-            //std::cout << "up to the contraction\n";
-            //std::cout << "D_tensor_trans dims: ai: " << D_tensor_trans.extent(0) << " bj: " << D_tensor_trans.extent(1) << " Dt_trans dims: ai: " << Dt_trans.extent(0) << " bj: " << Dt_trans.extent(1) << std::endl;
+
             btas::contract(1.0, D_tensor_trans, {1, 2}, Dt_trans, {2, 3}, 0.0, t_ij_ab_trans, {1, 3});
-            //std::cout << "after the contraction\n";
         }
         Dt_trans.resize(r_tensor);
         t_ij_ab_trans = Dt_trans; //Dt.resize(r_tensor);
         //D_tensor_trans.resize(r_tensor);
         t_ij_ab_trans.resize(r_tensor);
-        //printf("t_ij_ab_trans extent: %2i, %2i\n", t_ij_ab_trans.extent(0), t_ij_ab_trans.extent(1));
-        //printf("t_ij_ab_trans extent: %2i, %2i, %2i, %2i\n", t_ij_ab_trans.extent(0), t_ij_ab_trans.extent(1), t_ij_ab_trans.extent(2), t_ij_ab_trans.extent(3));
-        /*
-        for (int i = 0; i != ndocc; ++i) {
-            for (int j = 0; j != ndocc; ++j) {
-                for (int a = 0; a != nuocc; ++a) {
-                    for (int b = 0; b != nuocc; ++b) {
-                        Dt_trans(i, j, a, b) = Dt(i, j, a, b);
-                    }
-                }
-            }
-        }
-        */
+
         for (int i = 0; i != ndocc; ++i) {
             for (int j = 0; j != ndocc; ++j) {
                 for (int a = 0; a != nuocc; ++a) {
@@ -447,7 +406,6 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
-        //printf("t_ij_ab extent: %2i, %2i, %2i, %2i\n", t_ij_ab.extent(0), t_ij_ab.extent(1), t_ij_ab.extent(2), t_ij_ab.extent(3));
         ccd_energy = calc_ccd_energy(t_ij_ab, v_oo_uu, nao, ndocc);
         std::cout << "CCD energy for iteration " << cc_iter << ": " << ccd_energy << std::endl;
 
@@ -457,7 +415,6 @@ int main(int argc, char *argv[]) {
 
     } while (e_change > conv && cc_iter != max_cc_iter);
 
-    //printf("** Vector sum total %20.12f\n", total_tensor_sum);
     printf("** Hartree-Fock energy = %20.12f\n", ehf + enuc);
     printf("** MP2 energy = %20.12f\n", mp2_e_ten);
     printf("** Total MP2 energy = %20.12f\n", ehf + enuc + mp2_e_ten);
@@ -899,8 +856,6 @@ btas::Tensor<double>
     const int n = pq_rs.extent(0);
     const int nuocc = n - nocc;
 
-    printf("nocc= %2i,  n= %2i,  nuocc= %2i\n", nocc, n, nuocc);
-
     btas::Tensor<double> C_occ(n, nocc);
 
     for (int mu = 0; mu != n; ++mu) {
@@ -1047,46 +1002,36 @@ btas::Tensor<double> make_I_b_a(const btas::Tensor<double>& v_uu_oo, const btas:
 
 btas::Tensor<double> make_I_j_i(const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n) {
     int nuocc = n - nocc;
-    btas::Tensor<double> j_i; // (nuocc, nuocc)
-    //std::cout << "Made tensor to hold result\n";
+    btas::Tensor<double> j_i;
     btas::Tensor<double> v_temp(nuocc, nuocc, nocc, nocc);
     for (int i = 0; i != nocc; ++i) {
         for (int j = 0; j != nocc; ++j) {
             for (int a = 0; a != nuocc; ++a) {
                 for (int b = 0; b != nuocc; ++b) {
-                    //std::cout << "a: " << a << " b: " << b << " i: " << i << " j: " << j << std::endl;
                     v_temp(a, b, i, j) = 2 * v_uu_oo(a, b, i, j) - v_uu_oo(a, b, j, i);
                 }
             }
         }
     }
-    //std::cout << "Finished loop\n";
 
-    btas::contract(1.0, v_temp, {1, 2, 3, 4}, cc_amplitudes, {3, 5, 1, 2}, 0.0, j_i, {5, 4}); //ambiguous final ordering? Less ambiguous than it used to be
-    //std::cout << "Contraction finished\n";
+    btas::contract(1.0, v_temp, {1, 2, 3, 4}, cc_amplitudes, {3, 5, 1, 2}, 0.0, j_i, {5, 4});
     return j_i;
 }
 
 btas::Tensor<double> make_I_kl_ij(const btas::Tensor<double>& v_oo_oo, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n) {
     int nuocc = n - nocc;
     btas::Tensor<double> kl_ij(nocc, nocc, nocc, nocc);
-    //std::cout << "Initialized return vector I_ij_kl\n";
     btas::Tensor<double> vt;
     btas::contract(1.0, v_uu_oo, {1, 2, 3, 4}, cc_amplitudes, {5, 6, 1, 2}, 0.0, vt, {5, 6, 3, 4});
-    //std::cout << "First contraction I_ij_kl\n";
-    kl_ij = v_oo_oo + vt; // sum dim not matching
-    //std::cout << "Finished sum\n";
+    kl_ij = v_oo_oo + vt;
     return kl_ij;
 }
 
 btas::Tensor<double> make_I_jb_ia(const btas::Tensor<double>& v_ou_ou, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n) {
-    //std::cout << "Inside make_I_ia_jb fn\n";
     int nuocc = n - nocc;
     btas::Tensor<double> ia_jb(nocc, nuocc, nocc, nuocc);
-    //std::cout << "Initialized return vector\n";
     btas::Tensor<double> vt;
     btas::contract(0.5, v_uu_oo, {1, 2, 3, 4}, cc_amplitudes, {5, 4, 1, 6}, 0.0, vt, {5, 2, 3, 6});
-    //std::cout << "First contraction\n";
     ia_jb = v_ou_ou - vt;
     return ia_jb;
 }
@@ -1094,29 +1039,22 @@ btas::Tensor<double> make_I_jb_ia(const btas::Tensor<double>& v_ou_ou, const bta
 btas::Tensor<double> make_I_bj_ia(const btas::Tensor<double>& v_uo_ou, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n) {
     int nuocc = n - nocc;
     btas::Tensor<double> ib_aj; //(nocc, nuocc, nuocc, nocc)
-    //std::cout << "Initialized return vector\n";
-    //std::cout << "v dim: " << v_uu_oo.extent(0) << " " << v_uu_oo.extent(1) << " " << v_uu_oo.extent(2) << " " << v_uu_oo.extent(3) << std::endl;
-    //std::cout << "cc_amps dim: " << cc_amplitudes.extent(0) << " " << cc_amplitudes.extent(1) << " " << cc_amplitudes.extent(2) << " " << cc_amplitudes.extent(3) << "\n";
     btas::Tensor<double> vt_2ndterm;
     btas::contract(0.5, v_uu_oo, {1, 2, 3, 4}, cc_amplitudes, {3, 5, 6, 2}, 0.0, vt_2ndterm, {1, 5, 4, 6});
-    //std::cout << "First contraction\n";
     btas::Tensor<double> t_temp(nocc, nocc, nuocc, nuocc);
     for (int i = 0; i != nocc; ++i) {
         for (int j = 0; j != nocc; ++j) {
             for (int a = 0; a != nuocc; ++a) {
                 for (int b = 0; b != nuocc; ++b) {
                     t_temp(i, j, a, b) = cc_amplitudes(i, j, a, b) - 0.5 * cc_amplitudes(i, j, b, a);
-                    //std::cout << i << " " << a << " " << j << " " << b << "\n";
                 }
             }
         }
     }
-    //std::cout << "Finished loop\n";
+
     btas::Tensor<double> vt_1stterm;
     btas::contract(1.0, v_uu_oo, {1, 2, 3, 4}, t_temp, {4, 5, 2, 6}, 0.0, vt_1stterm, {1, 5, 3, 6});
-    //std::cout << "Second contraction\n";
     ib_aj = v_uo_ou + (vt_1stterm - vt_2ndterm);
-    //std::cout << "Vector subtraction\n";
     return ib_aj;
 }
 
@@ -1167,7 +1105,6 @@ btas::Tensor<double>
         for (int j = 0; j != nocc; ++j) {
             for (int a = 0; a != nuocc; ++a) {
                 for (int b = 0; b != nuocc; ++b) {
-                    //std::cout << "i: " << i << " j: " << j << " a: " << a << " b: " << b << std::endl;
                     t_temp(i, j, a, b) = 2 * t(i, j, a, b) - t(j, i, a, b);
                 }
             }
@@ -1185,32 +1122,7 @@ btas::Tensor<double>
     ccd_permute(I_ie_ma_t_mj_eb, n, nocc);
     ccd_permute(t_mi_ea_I_ej_mb, n, nocc);
 
-    /*
-    //TODO: Finish checking contraction codes
-    btas::Tensor<double> t_ij_ae_I_e_b_perm; // first term in permutative equation
-    btas::contract(1.0, t, {1, 2, 3, 4}, I_b_a, {4, 5}, 0.0, t_ij_ae_I_e_b_perm, {2, 1, 5, 3}); // These are just written exchanging a <-> b, i <-> j indices in the output tensor
-
-    btas::Tensor<double> t_im_ab_I_j_m_perm; // second term in permutative equation
-    btas::contract(1.0, t, {1, 2, 3, 4}, I_j_i, {5, 2}, 0.0, t_im_ab_I_j_m_perm, {5, 1, 4, 3});
-
-    btas::Tensor<double> v_ef_ab_i_ij_ef_perm; // third term in permutative equation, note already scaled
-    btas::contract(0.5, v_uu_uu, {1, 2, 3, 4}, t, {5, 6, 1, 2}, 0.0, v_ef_ab_i_ij_ef_perm, {6, 5, 4, 3});
-
-    btas::Tensor<double> t_mn_ab_I_ij_mn_perm; // fourth term in permutative equation, note already scaled
-    btas::contract(0.5, t, {1, 2, 3, 4}, I_kl_ij, {5, 6, 1, 2}, 0.0, t_mn_ab_I_ij_mn_perm, {6, 5, 4, 3});
-
-    btas::Tensor<double> t_mj_ae_I_ie_mb_perm; // fifth term in permutative equation
-    btas::contract(1.0, t, {1, 2, 3, 4}, I_jb_ia, {5, 4, 1, 6}, 0.0, t_mj_ae_I_ie_mb_perm, {2, 5, 6, 3});
-
-    btas::Tensor<double> I_ie_ma_t_mj_eb_perm; // sixth term in permutative equation
-    btas::contract(1.0, I_jb_ia, {1, 2, 3, 4}, t, {3, 5, 2, 6}, 0.0, I_ie_ma_t_mj_eb_perm, {5, 1, 6, 4});
-
-    btas::Tensor<double> t_mi_ea_I_ej_mb_perm; // seventh term in permutative equation
-    btas::contract(1.0, t_temp, {1, 2, 3, 4}, I_bj_ia, {3, 5, 1, 6}, 0.0, t_mi_ea_I_ej_mb_perm, {5, 2, 6, 4});
-    */
-    Dt = v_oo_uu + t_ij_ae_I_e_b + t_im_ab_I_j_m + v_ef_ab_t_ij_ef + t_mn_ab_I_ij_mn + t_mj_ae_I_ie_mb + I_ie_ma_t_mj_eb + t_mi_ea_I_ej_mb;/* +
-         t_ij_ae_I_e_b_perm + t_im_ab_I_j_m_perm + v_ef_ab_i_ij_ef_perm + t_mn_ab_I_ij_mn_perm + t_mj_ae_I_ie_mb_perm +
-         I_ie_ma_t_mj_eb_perm + t_mi_ea_I_ej_mb_perm;*/
+    Dt = v_oo_uu + t_ij_ae_I_e_b + t_im_ab_I_j_m + v_ef_ab_t_ij_ef + t_mn_ab_I_ij_mn + t_mj_ae_I_ie_mb + I_ie_ma_t_mj_eb + t_mi_ea_I_ej_mb;
 
 
     return Dt;
@@ -1242,23 +1154,18 @@ void ccd_permute(btas::Tensor<double>& tensor, int n, int nocc) {
                 for (int b = 0; b != nuocc; ++b) {
                     if (i == j) {
                         if (a == b) {
-                            tensor(i, j, a, b) *= 2; //t_ij_ae_I_e_b
-                            //std::cout << "** Doubling element " << i << j << a << b << std::endl;
+                            tensor(i, j, a, b) *= 2;
                         }
                         else if (a > b) {
                             temp = tensor(i, j, a, b);
                             tensor(i, j, a, b) += tensor(j, i, b, a);
                             tensor(j, i, b, a) += temp;
-                            //std::cout << "* Adding element " << i << j << a << b << " to element " << j << i << b << a << std::endl;
-                            //std::cout << "* Adding element " << j << i << b << a << " to element " << i << j << a << b << std::endl;
                         }
                     }
                     else {
                         temp = tensor(i, j, a, b);
                         tensor(i, j, a, b) += tensor(j, i, b, a);
                         tensor(j, i, b, a) += temp;
-                        //std::cout << "* Adding element " << i << j << a << b << " to element " << j << i << b << a << std::endl;
-                        //std::cout << "* Adding element " << j << i << b << a << " to element " << i << j << a << b << std::endl;
                     }
                 }
             }
