@@ -72,6 +72,7 @@ btas::Tensor<double> make_I_kl_ij(const btas::Tensor<double>& v_oo_oo, const bta
 btas::Tensor<double> make_I_j_i(const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n);
 btas::Tensor<double> make_I_b_a(const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n);
 double calc_ccd_energy(btas::Tensor<double>& t, btas::Tensor<double> v, int n, int nocc);
+void ccd_permute(btas::Tensor<double>& tensor, int n, int nocc);
 
 int main(int argc, char *argv[]) {
 
@@ -206,7 +207,7 @@ int main(int argc, char *argv[]) {
       auto D_last = D;
 
       // build a new Fock matrix
-      F = H;//auto //TODO: F scoping
+      F = H;//auto
       F += compute_2body_fock(obs, D);
 
       if (iter == 1) {
@@ -458,8 +459,7 @@ int main(int argc, char *argv[]) {
 
     //printf("** Vector sum total %20.12f\n", total_tensor_sum);
     printf("** Hartree-Fock energy = %20.12f\n", ehf + enuc);
-    //printf("** MP2 energy = %20.12f\n", mp2_e);
-    printf("** MP2 energy using tensor = %20.12f\n", mp2_e_ten);
+    printf("** MP2 energy = %20.12f\n", mp2_e_ten);
     printf("** Total MP2 energy = %20.12f\n", ehf + enuc + mp2_e_ten);
 
     libint2::finalize(); // done with libint
@@ -1193,7 +1193,15 @@ btas::Tensor<double>
     btas::Tensor<double> t_mi_ea_I_ej_mb; // seventh term in permutative equation
     btas::contract(1.0, t_temp, {1, 2, 3, 4}, I_bj_ia, {3, 5, 1, 6}, 0.0, t_mi_ea_I_ej_mb, {2, 5, 4, 6});
 
+    ccd_permute(t_ij_ae_I_e_b, n, nocc);
+    ccd_permute(t_im_ab_I_j_m, n, nocc);
+    ccd_permute(v_ef_ab_t_ij_ef, n, nocc);
+    ccd_permute(t_mn_ab_I_ij_mn, n, nocc);
+    ccd_permute(t_mj_ae_I_ie_mb, n, nocc);
+    ccd_permute(I_ie_ma_t_mj_eb, n, nocc);
+    ccd_permute(t_mi_ea_I_ej_mb, n, nocc);
 
+    /*
     //TODO: Finish checking contraction codes
     btas::Tensor<double> t_ij_ae_I_e_b_perm; // first term in permutative equation
     btas::contract(1.0, t, {1, 2, 3, 4}, I_b_a, {4, 5}, 0.0, t_ij_ae_I_e_b_perm, {2, 1, 5, 3}); // These are just written exchanging a <-> b, i <-> j indices in the output tensor
@@ -1215,10 +1223,11 @@ btas::Tensor<double>
 
     btas::Tensor<double> t_mi_ea_I_ej_mb_perm; // seventh term in permutative equation
     btas::contract(1.0, t_temp, {1, 2, 3, 4}, I_bj_ia, {3, 5, 1, 6}, 0.0, t_mi_ea_I_ej_mb_perm, {5, 2, 6, 4});
-
-    Dt = v_oo_uu + t_ij_ae_I_e_b + t_im_ab_I_j_m + v_ef_ab_t_ij_ef + t_mn_ab_I_ij_mn + t_mj_ae_I_ie_mb + I_ie_ma_t_mj_eb + t_mi_ea_I_ej_mb +
+    */
+    Dt = v_oo_uu + t_ij_ae_I_e_b + t_im_ab_I_j_m + v_ef_ab_t_ij_ef + t_mn_ab_I_ij_mn + t_mj_ae_I_ie_mb + I_ie_ma_t_mj_eb + t_mi_ea_I_ej_mb;/* +
          t_ij_ae_I_e_b_perm + t_im_ab_I_j_m_perm + v_ef_ab_i_ij_ef_perm + t_mn_ab_I_ij_mn_perm + t_mj_ae_I_ie_mb_perm +
-         I_ie_ma_t_mj_eb_perm + t_mi_ea_I_ej_mb_perm;
+         I_ie_ma_t_mj_eb_perm + t_mi_ea_I_ej_mb_perm;*/
+
 
     return Dt;
 }
@@ -1238,4 +1247,52 @@ double calc_ccd_energy(btas::Tensor<double>& t, btas::Tensor<double> v, int n, i
     }
 
     return ccd_e;
+}
+
+void ccd_permute(btas::Tensor<double>& tensor, int n, int nocc) {
+    int nuocc = n - nocc;
+    double temp;
+    for (int i = 0; i != nocc; ++i) {
+        for (int j = i; j != nocc; ++j) {
+            for (int a = 0; a != nuocc; ++a) {
+                for (int b = 0; b != nuocc; ++b) {
+                    if (i == j) {
+                        if (a == b) {
+                            tensor(i, j, a, b) *= 2; //t_ij_ae_I_e_b
+                            //std::cout << "** Doubling element " << i << j << a << b << std::endl;
+                        }
+                        else if (a > b) {
+                            temp = tensor(i, j, a, b);
+                            tensor(i, j, a, b) += tensor(j, i, b, a);
+                            tensor(j, i, b, a) += temp;
+                            //std::cout << "* Adding element " << i << j << a << b << " to element " << j << i << b << a << std::endl;
+                            //std::cout << "* Adding element " << j << i << b << a << " to element " << i << j << a << b << std::endl;
+                        }
+                    }
+                    else {
+                        temp = tensor(i, j, a, b);
+                        tensor(i, j, a, b) += tensor(j, i, b, a);
+                        tensor(j, i, b, a) += temp;
+                        //std::cout << "* Adding element " << i << j << a << b << " to element " << j << i << b << a << std::endl;
+                        //std::cout << "* Adding element " << j << i << b << a << " to element " << i << j << a << b << std::endl;
+                    }
+                }
+            }
+        }
+    }
+    /* //For testing purposes
+    for (int i = 0; i != nocc; ++i) {
+        for (int j = 0; j != nocc; ++j) {
+            for (int a = 0; a != nuocc; ++a) {
+                for (int b = 0; b != nuocc; ++b) {
+                    std::cout << tensor(i, j, a, b) << " ";
+                    if (tensor(i, j, a, b) == 1.0) {
+                        std::cout << "*" << i << j << a << b << "*";
+                    }
+                }
+            }
+        }
+        std::cout << std::endl;
+    }
+     */
 }
