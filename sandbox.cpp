@@ -1116,15 +1116,9 @@ btas::Tensor<double> make_I_bj_ia(const btas::Tensor<double>& v_uo_ou, const bta
         }
     }
     //std::cout << "Finished loop\n";
-
-    //std::cout << "t_temp dim: " << t_temp.extent(0) << " " << t_temp.extent(1) << " " << t_temp.extent(2) << " " << t_temp.extent(3) << std::endl;
-    //std::cout << "v dim: " << v_uu_oo.extent(0) << " " << v_uu_oo.extent(1) << " " << v_uu_oo.extent(2) << " " << v_uu_oo.extent(3) << std::endl;
     btas::Tensor<double> vt_1stterm;
     btas::contract(1.0, v_uu_oo, {1, 2, 3, 4}, t_temp, {4, 5, 2, 6}, 0.0, vt_1stterm, {1, 5, 3, 6});
     //std::cout << "Second contraction\n";
-    //std::cout << "v dim: " << v.extent(0) << " " << v.extent(1) << " " << v.extent(2) << " " << v.extent(3) << std::endl;
-    //std::cout << "v1 dim: " << vt_1stterm.extent(0) << " " << vt_1stterm.extent(1) << " " << vt_1stterm.extent(2) << " " << vt_1stterm.extent(3) << std::endl;
-    //std::cout << "v2 dim: " << vt_2ndterm.extent(0) << " " << vt_2ndterm.extent(1) << " " << vt_2ndterm.extent(2) << " " << vt_2ndterm.extent(3) << std::endl;
     ib_aj = v_uo_ou + (vt_1stterm - vt_2ndterm);
     //std::cout << "Vector subtraction\n";
     return ib_aj;
@@ -1156,27 +1150,21 @@ btas::Tensor<double>
     //TODO: write each term in the sum (two permutations of indices plus v), then add and return
     btas::Tensor<double> t_ij_ae_I_e_b; // first term in permutative equation
     btas::contract(1.0, t, {1, 2, 3, 4}, I_b_a, {4, 5}, 0.0, t_ij_ae_I_e_b, {1, 2, 3, 5});
-    //std::cout << "1st contraction\n";
 
     btas::Tensor<double> t_im_ab_I_j_m; // second term in permutative equation
     btas::contract(1.0, t, {1, 2, 3, 4}, I_j_i, {5, 2}, 0.0, t_im_ab_I_j_m, {1, 5, 3, 4});
-    //std::cout << "2nd contraction\n";
 
     btas::Tensor<double> v_ef_ab_t_ij_ef; // third term in permutative equation, note already scaled
     btas::contract(0.5, v_uu_uu, {1, 2, 3, 4}, t, {5, 6, 1, 2}, 0.0, v_ef_ab_t_ij_ef, {5, 6, 3, 4});
-    //std::cout << "3rd contraction\n";
 
     btas::Tensor<double> t_mn_ab_I_ij_mn; // fourth term in permutative equation, note already scaled
     btas::contract(0.5, t, {1, 2, 3, 4}, I_kl_ij, {5, 6, 1, 2}, 0.0, t_mn_ab_I_ij_mn, {5, 6, 3, 4});
-    //std::cout << "4th contraction\n";
 
     btas::Tensor<double> t_mj_ae_I_ie_mb; // fifth term in permutative equation
     btas::contract(1.0, t, {1, 2, 3, 4}, I_jb_ia, {5, 4, 1, 6}, 0.0, t_mj_ae_I_ie_mb, {5, 2, 3, 6});
-    //std::cout << "5th contraction\n";
 
     btas::Tensor<double> I_ie_ma_t_mj_eb; // sixth term in permutative equation
     btas::contract(1.0, I_jb_ia, {1, 2, 3, 4}, t, {3, 5, 2, 6}, 0.0, I_ie_ma_t_mj_eb, {1, 5, 4, 6});
-    //std::cout << "6th contraction\n";
 
     btas::Tensor<double> t_temp(nocc, nocc, nuocc, nuocc);
     for (int i = 0; i != nocc; ++i) {
