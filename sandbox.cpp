@@ -1070,14 +1070,10 @@ btas::Tensor<double> make_I_j_i(const btas::Tensor<double>& v_uu_oo, const btas:
 btas::Tensor<double> make_I_kl_ij(const btas::Tensor<double>& v_oo_oo, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n) {
     int nuocc = n - nocc;
     btas::Tensor<double> kl_ij(nocc, nocc, nocc, nocc);
-    //std::cout << "v dim: " << v.extent(0) << " " << v.extent(1) << " " << v.extent(2) << " " << v.extent(3) << std::endl;
-    //std::cout << "cc_amps dim: " << cc_amplitudes.extent(0) << " " << cc_amplitudes.extent(1) << " " << cc_amplitudes.extent(2) << " " << cc_amplitudes.extent(3) << "\n";
     //std::cout << "Initialized return vector I_ij_kl\n";
     btas::Tensor<double> vt;
     btas::contract(1.0, v_uu_oo, {1, 2, 3, 4}, cc_amplitudes, {5, 6, 1, 2}, 0.0, vt, {5, 6, 3, 4});
     //std::cout << "First contraction I_ij_kl\n";
-    //std::cout << "v dim: " << v.extent(0) << " " << v.extent(1) << " " << v.extent(2) << " " << v.extent(3) << std::endl;
-    //std::cout << "vt dim: " << vt.extent(0) << " " << vt.extent(1) << " " << vt.extent(2) << " " << vt.extent(3) << "\n";
     kl_ij = v_oo_oo + vt; // sum dim not matching
     //std::cout << "Finished sum\n";
     return kl_ij;
