@@ -62,15 +62,14 @@ btas::Tensor<double> make_v_gg_gg(const Matrix& C, const btas::Tensor<double>& T
 btas::Tensor<double> make_v_aa_aa(const libint2::BasisSet& obs);
 
 btas::Tensor<double>
-cc_amps_update(const btas::Tensor<double>& v_oo_uu, const btas::Tensor<double>& v_uu_uu, const btas::Tensor<double>& t,
-               const btas::Tensor<double>& I_b_a, const btas::Tensor<double>& I_j_i, const btas::Tensor<double>& I_kl_ij,
-               const btas::Tensor<double>& I_jb_ia, const btas::Tensor<double>& I_bj_ia, const int n, const int nocc);
-btas::Tensor<double> make_density_tensor(const Matrix& fock_matrix, const int nocc, const int n);
-btas::Tensor<double> make_I_uo_ou(const btas::Tensor<double>& v_uo_ou, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n);
-btas::Tensor<double> make_I_ou_ou(const btas::Tensor<double>& v_ou_ou, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n);
-btas::Tensor<double> make_I_oo_oo(const btas::Tensor<double>& v_oo_oo, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n);
-btas::Tensor<double> make_I_o_o(const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n);
-btas::Tensor<double> make_I_u_u(const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n);
+calcResidual(const btas::Tensor<double>& v_oo_uu, const btas::Tensor<double>& v_uu_uu, const btas::Tensor<double>& t,
+             const btas::Tensor<double>& I_u_u, const btas::Tensor<double>& I_o_o, const btas::Tensor<double>& I_oo_oo,
+             const btas::Tensor<double>& I_ou_ou, const btas::Tensor<double>& I_uo_ou, const int n, const int nocc);
+btas::Tensor<double> make_I_uo_ou(const btas::Tensor<double>& v_uo_ou, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n);
+btas::Tensor<double> make_I_ou_ou(const btas::Tensor<double>& v_ou_ou, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n);
+btas::Tensor<double> make_I_oo_oo(const btas::Tensor<double>& v_oo_oo, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n);
+btas::Tensor<double> make_I_o_o(const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n);
+btas::Tensor<double> make_I_u_u(const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n);
 double calc_ccd_energy(btas::Tensor<double> const & t_oo_uu, btas::Tensor<double> const & v_oo_uu, int n, int nocc);
 void ccd_permute(btas::Tensor<double>& tensor);
 //btas::Tensor<double> /*void*/ ccd_permute(btas::Tensor<double>& tensor);
@@ -246,6 +245,7 @@ int main(int argc, char *argv[]) {
 
     } while (((fabs(ediff) > conv) || (fabs(rmsd) > conv)) && (iter < maxiter));
 
+    // CC prep
     btas::Tensor<double> v_aa_aa = make_v_aa_aa(obs);
     //std::cout << "Made v_aa_aa\n";
     auto v_gg_gg = make_v_gg_gg(C, v_aa_aa);
@@ -254,78 +254,90 @@ int main(int argc, char *argv[]) {
     auto nuocc = nao - ndocc;
     auto n = nao;
 
-    // CCD loop
+    std::cout << "v_oo_oo:\n";
     btas::Tensor<double> v_oo_oo(ndocc, ndocc, ndocc, ndocc);
     for (int i = 0; i != ndocc; ++i) {
         for (int j = 0; j != ndocc; ++j) {
             for (int k = 0; k != ndocc; ++k) {
                 for (int l = 0; l != ndocc; ++l) {
                     v_oo_oo(i, j, k, l) = v_gg_gg(i, j, k, l);
+                    std::cout << v_oo_oo(i, j, k, l) << " \n";
                 }
             }
         }
     }
 
+    std::cout << "v_uu_uu:\n";
     btas::Tensor<double> v_uu_uu(nuocc, nuocc, nuocc, nuocc);
     for (int a = 0; a != nuocc; ++a) {
         for (int b = 0; b != nuocc; ++b) {
             for (int c = 0; c != nuocc; ++c) {
                 for (int d = 0; d != nuocc; ++d) {
                     v_uu_uu(a, b, c, d) = v_gg_gg(a + ndocc, b + ndocc, c + ndocc, d + ndocc);
+                    std::cout << v_uu_uu(a, b, c, d) << " \n";
                 }
             }
         }
     }
 
+    std::cout << "v_uu_oo:\n";
     btas::Tensor<double> v_uu_oo(nuocc, nuocc, ndocc, ndocc);
     for (int a = 0; a != nuocc; ++a) {
         for (int b = 0; b != nuocc; ++b) {
             for (int i = 0; i != ndocc; ++i) {
                 for (int j = 0; j != ndocc; ++j) {
                     v_uu_oo(a, b, i, j) = v_gg_gg(a + ndocc, b + ndocc, i, j);
+                    std::cout << v_uu_oo(a, b, i, j) << " \n";
                 }
             }
         }
     }
 
+    std::cout << "v_oo_uu:\n";
     btas::Tensor<double> v_oo_uu(ndocc, ndocc, nuocc, nuocc);
     for (int i = 0; i != ndocc; ++i) {
         for (int j = 0; j != ndocc; ++j) {
             for (int a = 0; a != nuocc; ++a) {
                 for (int b = 0; b != nuocc; ++b) {
                    v_oo_uu(i, j, a, b) = v_gg_gg(i, j, a + ndocc, b + ndocc);
+                   std::cout << v_oo_uu(i, j, a, b) << " \n";
                 }
             }
         }
     }
 
+    std::cout << "v_ou_ou:\n";
     btas::Tensor<double> v_ou_ou(ndocc, nuocc, ndocc, nuocc);
     for (int i = 0; i != ndocc; ++i) {
         for (int a = 0; a != nuocc; ++a) {
             for (int j = 0; j != ndocc; ++j) {
                 for (int b = 0; b != nuocc; ++b) {
                     v_ou_ou(i, a, j, b) = v_gg_gg(i, a + ndocc, j, b + ndocc);
+                    std::cout << v_ou_ou(i, a, j, b) << " \n";
                 }
             }
         }
     }
 
+    std::cout << "v_uo_ou:\n";
     btas::Tensor<double> v_uo_ou(nuocc, ndocc, ndocc, nuocc);
     for (int a = 0; a != nuocc; ++a) {
         for (int i = 0; i != ndocc; ++i) {
             for (int j = 0; j != ndocc; ++j) {
                 for (int b = 0; b != nuocc; ++b) {
-                    v_ou_ou(a, i, j, b) = v_gg_gg(a + ndocc, i, j, b + ndocc);
+                    v_uo_ou(a, i, j, b) = v_gg_gg(a + ndocc, i, j, b + ndocc);
+                    std::cout << v_uo_ou(a, i, j, b) << " \n";
                 }
             }
         }
     }
 
-    const int max_cc_iter = 300;
+    const int max_cc_iter = 3; //300
     int cc_iter = 0;
     double ccd_energy = 0.0;
     double ccd_energy_last = 0.0;
     double e_change;
+    btas::Tensor<double> t_oo_uu_prev;
     rmsd = 0.0; //TODO: make independent variable for this?
     btas::Tensor<double> t_oo_uu(ndocc, ndocc, nuocc, nuocc);
     t_oo_uu.fill(0);
@@ -335,7 +347,6 @@ int main(int argc, char *argv[]) {
     btas::Tensor<double> I_o_o(ndocc, ndocc);
     btas::Tensor<double> I_u_u(nuocc, nuocc);
     btas::Tensor<double> R;
-    auto D_tensor = make_density_tensor(F, ndocc, n);
 
     //std::cout << "n: " << n << " F dims " << F.rows() << F.cols() << std::endl;
     btas::Tensor<double> Ften(n, n);
@@ -352,9 +363,11 @@ int main(int argc, char *argv[]) {
         }
         std::cout << std::endl;
     }
+
+    // CCD loop
     do {
         ++cc_iter;
-        auto t_ij_ab_last = t_oo_uu;
+        t_oo_uu_prev = t_oo_uu;
         ccd_energy_last = ccd_energy;
 
         I_uo_ou = make_I_uo_ou(v_uo_ou, v_uu_oo, t_oo_uu, ndocc, n);
@@ -362,7 +375,51 @@ int main(int argc, char *argv[]) {
         I_oo_oo = make_I_oo_oo(v_oo_oo, v_uu_oo, t_oo_uu, ndocc, n);
         I_o_o = make_I_o_o(v_uu_oo, t_oo_uu, ndocc, n);
         I_u_u = make_I_u_u(v_uu_oo, t_oo_uu, ndocc, n);
-        R = cc_amps_update(v_oo_uu, v_uu_uu, t_oo_uu, I_u_u, I_o_o, I_oo_oo, I_ou_ou, I_uo_ou, n, ndocc); // = R residual
+
+        std::cout << "I_uo_ou:\n";
+        for (int a = 0; a != nuocc; ++a) {
+            for (int i = 0; i != ndocc; ++i) {
+                for (int j = 0; j != ndocc; ++j) {
+                    for (int b = 0; b != nuocc; ++b) {
+                        std::cout << I_uo_ou(a, i, j, b) << " \n";
+                    }
+                }
+            }
+        }
+        std::cout << "I_ou_ou:\n";
+        for (int a = 0; a != nuocc; ++a) {
+            for (int i = 0; i != ndocc; ++i) {
+                for (int j = 0; j != ndocc; ++j) {
+                    for (int b = 0; b != nuocc; ++b) {
+                        std::cout << I_ou_ou(i, a, j, b) << " \n";
+                    }
+                }
+            }
+        }
+        std::cout << "I_oo_oo:\n";
+        for (int i = 0; i != ndocc; ++i) {
+            for (int j = 0; j != ndocc; ++j) {
+                for (int k = 0; k != ndocc; ++k) {
+                    for (int l = 0; l != ndocc; ++l) {
+                        std::cout << I_oo_oo(i, j, k, l) << " \n";
+                    }
+                }
+            }
+        }
+        std::cout << "I_o_o:\n";
+        for (int i = 0; i != ndocc; ++i) {
+            for (int j = 0; j != ndocc; ++j) {
+                std::cout << I_o_o(i, j) << " \n";
+            }
+        }
+        std::cout << "I_u_u:\n";
+        for (int a = 0; a != ndocc; ++a) {
+            for (int b = 0; b != ndocc; ++b) {
+                std::cout << I_u_u(a, b) << " \n";
+            }
+        }
+
+        R = calcResidual(v_oo_uu, v_uu_uu, t_oo_uu, I_u_u, I_o_o, I_oo_oo, I_ou_ou, I_uo_ou, n, ndocc); // = R residual
 
         //std::cout << "Iteration: " << cc_iter << " R: " << R(0, 0, 0, 0) << std::endl;
 
@@ -375,6 +432,7 @@ int main(int argc, char *argv[]) {
                             //" + " << F_mo(j,j) << " - " << F_mo(a + ndocc, a + ndocc) << " - " << F_mo(b + ndocc, b + ndocc) << ")\n";
                         t_oo_uu(i, j, a, b) +=
                                 R(i, j, a, b) / (F_mo(i, i) + F_mo(j, j) - F_mo(a + ndocc, a + ndocc) - F_mo(b + ndocc, b + ndocc));
+                        std::cout << "t_oo_uu after R update: " << t_oo_uu(i, j, a, b) << std::endl;
                     }
                 }
             }
@@ -413,11 +471,11 @@ int main(int argc, char *argv[]) {
         std::cout << "CCD energy for iteration " << cc_iter << ": " << ccd_energy << std::endl;
         //std::cout << "Zero energy for iteration " << cc_iter << ": " << zero_energy << std::endl;
 
-        e_change = std::abs(ccd_energy_last - ccd_energy);
+        e_change = ccd_energy - ccd_energy_last;
         std::cout << "Energy change for iteration " << cc_iter << ": " << e_change << std::endl;
         //rmsd = (t_ij_ab - t_ij_ab_last).
-
-    } while (e_change > conv && cc_iter != max_cc_iter);
+        //std::cout << (std::abs(e_change) > conv) << (cc_iter != max_cc_iter) << std::endl;
+    } while (std::abs(e_change) > conv && cc_iter != max_cc_iter);
 
     printf("** Hartree-Fock energy = %20.12f\n", ehf + enuc);
     //printf("** MP2 energy = %20.12f\n", emp2);
@@ -868,17 +926,17 @@ make_F_mo(const Matrix& C, const btas::Tensor<double>& F) { //TODO: element copy
     }
     //std::cout << "C_ten size: " << C_ten.extent(0) << C_ten.extent(1) << std::endl;
 
-    btas::Tensor<double> v_ga_aa; //(v_aa_aa.extent(0), v_aa_aa.extent(1), v_aa_aa.extent(2), v_aa_aa.extent(3));  // (iq|rs)
+    btas::Tensor<double> F_ma; //(v_aa_aa.extent(0), v_aa_aa.extent(1), v_aa_aa.extent(2), v_aa_aa.extent(3));  // (iq|rs)
     // iq_rs(i,q,r,s) = 1.0 * \sum_p pq_rs(p,q,r,s) * C_occ(p,i) + 0.0 * iq_rs(i,q,r,s)
-    btas::contract(1.0, F, {1, 2}, C_ten, {1, 3}, 0.0, v_ga_aa, {3, 2});
+    btas::contract(1.0, F, {1, 2}, C_ten, {1, 3}, 0.0, F_ma, {3, 2});
     //std::cout << "First contraction\n";
 
-    btas::Tensor<double> v_gg_aa;
-    btas::contract(1.0, v_ga_aa, {1, 2}, C_ten, {2, 3}, 0.0, v_gg_aa, {1, 3});
+    btas::Tensor<double> F_mm;
+    btas::contract(1.0, F_ma, {1, 2}, C_ten, {2, 3}, 0.0, F_mm, {1, 3});
     //std::cout << "Second contraction\n";
 
     //std::cout << "v_gg_aa: " << v_gg_aa.extent(0) << v_gg_aa.extent(1) << std::endl;
-    return v_gg_aa;
+    return F_mm;
 }
 
 // transforms <mu nu | rho sigma> -> <pq|rs>
@@ -894,6 +952,16 @@ btas::Tensor<double>
             C_ten(p, q) = C(p, q);
         }
     }
+    /*
+    std::cout << "C:\n" << C << std::endl;
+    std::cout << "C_ten\n";
+    for (int p = 0; p != C_ten.extent(0); ++p) {
+        for (int q = 0; q != C_ten.extent(1); ++q) {
+            std::cout << C_ten(p, q) << " ";
+        }
+        std::cout << std::endl;
+    }
+     */
     //std::cout << "C_ten size: " << C_ten.extent(0) << C_ten.extent(1) << std::endl;
 
     btas::Tensor<double> v_ga_aa; //(v_aa_aa.extent(0), v_aa_aa.extent(1), v_aa_aa.extent(2), v_aa_aa.extent(3));  // (iq|rs)
@@ -1017,7 +1085,7 @@ btas::Tensor<double> make_v_aa_aa(const libint2::BasisSet& obs)
 
 //    // iq_rs(i,q,r,s) = 1.0 * \sum_p pq_rs(p,q,r,s) * C_occ(p,i) + 0.0 * iq_rs(i,q,r,s)
 //    btas::contract(1.0, pq_rs, {1, 2, 3, 4}, C_occ, {1, 5}, 0.0, iq_rs, {5, 2, 3, 4});
-btas::Tensor<double> make_I_u_u(const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n) {
+btas::Tensor<double> make_I_u_u(const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n) {
     int nuocc = n - nocc;
     btas::Tensor<double> I_u_u; // (nuocc, nuocc)
 
@@ -1026,18 +1094,18 @@ btas::Tensor<double> make_I_u_u(const btas::Tensor<double>& v_uu_oo, const btas:
         for (int j = 0; j != nocc; ++j) {
             for (int a = 0; a != nuocc; ++a) {
                 for (int b = 0; b != nuocc; ++b) {
-                    v_temp(a, b, i, j) = (v_uu_oo(a, b, i, j) * -2) + v_uu_oo(b, a, i, j);
+                    v_temp(a, b, i, j) = (-2 * v_uu_oo(a, b, i, j)) + v_uu_oo(b, a, i, j);
                     //v_temp(a, b, i, j) = (v_uu_oo(b, a, i, j) * -2) + v_uu_oo(a, b, i, j);
                 }
             }
         }
     }
-
-    btas::contract(1.0, v_temp, {1, 2, 3, 4}, cc_amplitudes, {3, 4, 1, 5}, 0.0, I_u_u, {2, 5});
+    //std::cout << "Making I_u_u: v_temp: " << v_temp(0,0,0,0) << " t_oo_uu: " << t_oo_uu(0,0,0,0) << std::endl;
+    btas::contract(1.0, v_temp, {1, 2, 3, 4}, t_oo_uu, {3, 4, 1, 5}, 0.0, I_u_u, {2, 5});
     return I_u_u;
 }
 
-btas::Tensor<double> make_I_o_o(const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n) {
+btas::Tensor<double> make_I_o_o(const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n) {
     int nuocc = n - nocc;
     btas::Tensor<double> I_o_o;
     btas::Tensor<double> v_temp(nuocc, nuocc, nocc, nocc);
@@ -1045,47 +1113,47 @@ btas::Tensor<double> make_I_o_o(const btas::Tensor<double>& v_uu_oo, const btas:
         for (int j = 0; j != nocc; ++j) {
             for (int a = 0; a != nuocc; ++a) {
                 for (int b = 0; b != nuocc; ++b) {
-                    v_temp(a, b, i, j) = 2 * v_uu_oo(a, b, i, j) - v_uu_oo(b, a, j, i);
+                    v_temp(a, b, i, j) = (2 * v_uu_oo(a, b, i, j)) - v_uu_oo(a, b, j, i);
                     //v_temp(a, b, i, j) = 2 * v_uu_oo(b, a, i, j) - v_uu_oo(a, b, j, i);
                 }
             }
         }
     }
-
-    btas::contract(1.0, v_temp, {1, 2, 3, 4}, cc_amplitudes, {3, 5, 1, 2}, 0.0, I_o_o, {5, 4});
+    //std::cout << "Making I_o_o: v_temp: " << v_temp(0,0,0,0) << " t_oo_uu: " << t_oo_uu(0,0,0,0) << std::endl;
+    btas::contract(1.0, v_temp, {1, 2, 3, 4}, t_oo_uu, {3, 5, 1, 2}, 0.0, I_o_o, {5, 4});
     return I_o_o;
 }
 
-btas::Tensor<double> make_I_oo_oo(const btas::Tensor<double>& v_oo_oo, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n) {
+btas::Tensor<double> make_I_oo_oo(const btas::Tensor<double>& v_oo_oo, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n) {
     int nuocc = n - nocc;
-    btas::Tensor<double> I_oo_Oo(nocc, nocc, nocc, nocc);
+    btas::Tensor<double> I_oo_oo(nocc, nocc, nocc, nocc);
     btas::Tensor<double> vt;
-    btas::contract(1.0, v_uu_oo, {1, 2, 3, 4}, cc_amplitudes, {5, 6, 1, 2}, 0.0, vt, {5, 6, 3, 4});
-    I_oo_Oo = v_oo_oo + vt;
-    return I_oo_Oo;
+    btas::contract(1.0, v_uu_oo, {1, 2, 3, 4}, t_oo_uu, {5, 6, 1, 2}, 0.0, vt, {5, 6, 3, 4});
+    I_oo_oo = v_oo_oo + vt;
+    return I_oo_oo;
 }
 
-btas::Tensor<double> make_I_ou_ou(const btas::Tensor<double>& v_ou_ou, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n) {
+btas::Tensor<double> make_I_ou_ou(const btas::Tensor<double>& v_ou_ou, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n) {
     int nuocc = n - nocc;
     btas::Tensor<double> I_ou_ou(nocc, nuocc, nocc, nuocc);
-    btas::Tensor<double> vt;
-    btas::contract(0.5, v_uu_oo, {1, 2, 3, 4}, cc_amplitudes, {5, 4, 1, 6}, 0.0, vt, {5, 2, 3, 6});
+    btas::Tensor<double> vt(nocc, nuocc, nocc, nuocc);
+    btas::contract(0.5, v_uu_oo, {1, 2, 3, 4}, t_oo_uu, {5, 4, 1, 6}, 0.0, vt, {5, 2, 3, 6});
     I_ou_ou = v_ou_ou - vt;
     return I_ou_ou;
 }
 
-btas::Tensor<double> make_I_uo_ou(const btas::Tensor<double>& v_uo_ou, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& cc_amplitudes, const int nocc, const int n) {
+btas::Tensor<double> make_I_uo_ou(const btas::Tensor<double>& v_uo_ou, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n) {
     int nuocc = n - nocc;
     btas::Tensor<double> I_uo_ou;
     btas::Tensor<double> vt_2ndterm;
-    btas::contract(0.5, v_uu_oo, {1, 2, 3, 4}, cc_amplitudes, {3, 5, 6, 2}, 0.0, vt_2ndterm, {1, 5, 4, 6});
+    btas::contract(0.5, v_uu_oo, {1, 2, 3, 4}, t_oo_uu, {3, 5, 6, 2}, 0.0, vt_2ndterm, {1, 5, 4, 6});
     btas::Tensor<double> t_temp(nocc, nocc, nuocc, nuocc);
     for (int i = 0; i != nocc; ++i) {
         for (int j = 0; j != nocc; ++j) {
             for (int a = 0; a != nuocc; ++a) {
                 for (int b = 0; b != nuocc; ++b) {
-                    t_temp(i, j, a, b) = cc_amplitudes(i, j, a, b) - 0.5 * cc_amplitudes(i, j, b, a);
-                    //t_temp(i, j, a, b) = cc_amplitudes(i, j, b, a) - 0.5 * cc_amplitudes(i, j, a, b);
+                    t_temp(i, j, a, b) = t_oo_uu(i, j, a, b) - (0.5 * t_oo_uu(i, j, b, a));
+                    //t_temp(i, j, a, b) = t_oo_uu(i, j, b, a) - 0.5 * t_oo_uu(i, j, a, b);
                 }
             }
         }
@@ -1093,58 +1161,50 @@ btas::Tensor<double> make_I_uo_ou(const btas::Tensor<double>& v_uo_ou, const bta
 
     btas::Tensor<double> vt_1stterm;
     btas::contract(1.0, v_uu_oo, {1, 2, 3, 4}, t_temp, {4, 5, 2, 6}, 0.0, vt_1stterm, {1, 5, 3, 6});
-    I_uo_ou = v_uo_ou + (vt_1stterm - vt_2ndterm);
+    I_uo_ou = v_uo_ou + vt_1stterm - vt_2ndterm;
     return I_uo_ou;
 }
 
-btas::Tensor<double> make_density_tensor(const Matrix& fock_matrix, const int nocc, const int n) {
-    int nuocc = n - nocc;
-    btas::Tensor<double> D(nocc, nocc, nuocc, nuocc);
-    for (int i = 0; i != nocc; ++i) {
-        for (int j = 0; j != nocc; ++j) {
-            for (int a = 0; a != nuocc; ++a) {
-                for (int b = 0; b != nuocc; ++b) {
-                    D(i, j, a, b) = fock_matrix(i, i) + fock_matrix(j, j) - fock_matrix(a, a) - fock_matrix(b, b);
-                }
-            }
-        }
-    }
-    return D;
-}
-//R = cc_amps_update(v_oo_uu, v_uu_uu, t_oo_uu, I_u_u, I_o_o, I_oo_oo, I_ou_ou, I_uo_ou, n, ndocc)
+//R = calcResidual(v_oo_uu, v_uu_uu, t_oo_uu, I_u_u, I_o_o, I_oo_oo, I_ou_ou, I_uo_ou, n, ndocc)
 btas::Tensor<double>
-        cc_amps_update(const btas::Tensor<double>& v_oo_uu, const btas::Tensor<double>& v_uu_uu, const btas::Tensor<double>& t,
-                       const btas::Tensor<double>& I_b_a, const btas::Tensor<double>& I_j_i, const btas::Tensor<double>& I_kl_ij,
-                       const btas::Tensor<double>& I_jb_ia, const btas::Tensor<double>& I_bj_ia, const int n, const int nocc) {
+        calcResidual(const btas::Tensor<double>& v_oo_uu, const btas::Tensor<double>& v_uu_uu, const btas::Tensor<double>& t,
+                     const btas::Tensor<double>& I_u_u, const btas::Tensor<double>& I_o_o, const btas::Tensor<double>& I_oo_oo,
+                     const btas::Tensor<double>& I_ou_ou, const btas::Tensor<double>& I_uo_ou, const int n, const int nocc) {
 
     int nuocc = n - nocc;
-    btas::Tensor<double> R;
+    btas::Tensor<double> R(nocc, nocc, nuocc, nuocc);
 
     //TODO: write each term in the sum (two permutations of indices plus v), then add and return
     btas::Tensor<double> t_ij_ae_I_e_b; // first term in permutative equation
-    btas::contract(1.0, t, {1, 2, 3, 4}, I_b_a, {4, 5}, 0.0, t_ij_ae_I_e_b, {1, 2, 3, 5});
+    btas::contract(1.0, t, {1, 2, 3, 4}, I_u_u, {4, 5}, 0.0, t_ij_ae_I_e_b, {1, 2, 3, 5});
+    std::cout << "t_ij_ae_I_e_b: " << t_ij_ae_I_e_b(0, 0, 0, 0) << "\n";
 
     btas::Tensor<double> t_im_ab_I_j_m; // second term in permutative equation
-    btas::contract(1.0, t, {1, 2, 3, 4}, I_j_i, {5, 2}, 0.0, t_im_ab_I_j_m, {1, 5, 3, 4});
+    btas::contract(1.0, t, {1, 2, 3, 4}, I_o_o, {5, 2}, 0.0, t_im_ab_I_j_m, {1, 5, 3, 4});
+    std::cout << "t_im_ab_I_j_m: " << t_im_ab_I_j_m(0, 0, 0, 0) << "\n";
 
     btas::Tensor<double> v_ef_ab_t_ij_ef; // third term in permutative equation, note already scaled
     btas::contract(0.5, v_uu_uu, {1, 2, 3, 4}, t, {5, 6, 1, 2}, 0.0, v_ef_ab_t_ij_ef, {5, 6, 3, 4});
+    std::cout << "v_ef_ab_t_ij_ef: " << v_ef_ab_t_ij_ef(0, 0, 0, 0) << "\n";
 
     btas::Tensor<double> t_mn_ab_I_ij_mn; // fourth term in permutative equation, note already scaled
-    btas::contract(0.5, t, {1, 2, 3, 4}, I_kl_ij, {5, 6, 1, 2}, 0.0, t_mn_ab_I_ij_mn, {5, 6, 3, 4});
+    btas::contract(0.5, t, {1, 2, 3, 4}, I_oo_oo, {5, 6, 1, 2}, 0.0, t_mn_ab_I_ij_mn, {5, 6, 3, 4});
+    std::cout << "t_mn_ab_I_ij_mn: " << t_mn_ab_I_ij_mn(0, 0, 0, 0) << "\n";
 
     btas::Tensor<double> t_mj_ae_I_ie_mb; // fifth term in permutative equation
-    btas::contract(1.0, t, {1, 2, 3, 4}, I_jb_ia, {5, 4, 1, 6}, 0.0, t_mj_ae_I_ie_mb, {5, 2, 3, 6});
+    btas::contract(1.0, t, {1, 2, 3, 4}, I_ou_ou, {5, 4, 1, 6}, 0.0, t_mj_ae_I_ie_mb, {5, 2, 3, 6});
+    std::cout << "t_mj_ae_I_ie_mb: " << t_mj_ae_I_ie_mb(0, 0, 0, 0) << "\n";
 
     btas::Tensor<double> I_ie_ma_t_mj_eb; // sixth term in permutative equation
-    btas::contract(1.0, I_jb_ia, {1, 2, 3, 4}, t, {3, 5, 2, 6}, 0.0, I_ie_ma_t_mj_eb, {1, 5, 4, 6});
+    btas::contract(1.0, I_ou_ou, {1, 2, 3, 4}, t, {3, 5, 2, 6}, 0.0, I_ie_ma_t_mj_eb, {1, 5, 4, 6});
+    std::cout << "I_ie_ma_t_mj_eb: " << I_ie_ma_t_mj_eb(0, 0, 0, 0) << "\n";
 
     btas::Tensor<double> t_temp(nocc, nocc, nuocc, nuocc);
     for (int i = 0; i != nocc; ++i) {
         for (int j = 0; j != nocc; ++j) {
             for (int a = 0; a != nuocc; ++a) {
                 for (int b = 0; b != nuocc; ++b) {
-                    t_temp(i, j, a, b) = 2 * t(i, j, a, b) - t(j, i, a, b);
+                    t_temp(i, j, a, b) = (2 * t(i, j, a, b)) - t(j, i, a, b);
                     //t_temp(i, j, a, b) = 2 * t(j, i, a, b) - t(i, j, a, b);
                 }
             }
@@ -1152,7 +1212,8 @@ btas::Tensor<double>
     }
 
     btas::Tensor<double> t_mi_ea_I_ej_mb; // seventh term in permutative equation
-    btas::contract(1.0, t_temp, {1, 2, 3, 4}, I_bj_ia, {3, 5, 1, 6}, 0.0, t_mi_ea_I_ej_mb, {2, 5, 4, 6});
+    btas::contract(1.0, t_temp, {1, 2, 3, 4}, I_uo_ou, {3, 5, 1, 6}, 0.0, t_mi_ea_I_ej_mb, {2, 5, 4, 6});
+    std::cout << "t_mi_ea_I_ej_mb: " << t_mi_ea_I_ej_mb(0, 0, 0, 0) << "\n";
 
     ccd_permute(t_ij_ae_I_e_b);
     ccd_permute(t_im_ab_I_j_m);
@@ -1162,16 +1223,27 @@ btas::Tensor<double>
     ccd_permute(I_ie_ma_t_mj_eb);
     ccd_permute(t_mi_ea_I_ej_mb);
 
-    R = v_oo_uu + t_ij_ae_I_e_b - t_im_ab_I_j_m + v_ef_ab_t_ij_ef + t_mn_ab_I_ij_mn - t_mj_ae_I_ie_mb - I_ie_ma_t_mj_eb + t_mi_ea_I_ej_mb;
+    std::cout << "t_ij_ae_I_e_b: " << t_ij_ae_I_e_b(0, 0, 0, 0) << "\n";
+    std::cout << "t_im_ab_I_j_m: " << t_im_ab_I_j_m(0, 0, 0, 0) << "\n";
+    std::cout << "v_ef_ab_t_ij_ef: " << v_ef_ab_t_ij_ef(0, 0, 0, 0) << "\n";
+    std::cout << "t_mn_ab_I_ij_mn: " << t_mn_ab_I_ij_mn(0, 0, 0, 0) << "\n";
+    std::cout << "t_mj_ae_I_ie_mb: " << t_mj_ae_I_ie_mb(0, 0, 0, 0) << "\n";
+    std::cout << "I_ie_ma_t_mj_eb: " << I_ie_ma_t_mj_eb(0, 0, 0, 0) << "\n";
+    std::cout << "t_mi_ea_I_ej_mb: " << t_mi_ea_I_ej_mb(0, 0, 0, 0) << "\n";
 
+    std::cout << "Making R = " << v_oo_uu(0, 0, 0, 0) << " + " << t_ij_ae_I_e_b(0, 0, 0, 0) << " - " << t_im_ab_I_j_m(0, 0, 0, 0)
+        << " + " << v_ef_ab_t_ij_ef(0, 0, 0, 0) << " + " << t_mn_ab_I_ij_mn(0, 0, 0, 0) << " - " << t_mj_ae_I_ie_mb(0, 0, 0, 0)
+        << " - " << I_ie_ma_t_mj_eb(0, 0, 0, 0) << " + " << t_mi_ea_I_ej_mb(0, 0, 0, 0) << std::endl;
+    R = v_oo_uu + t_ij_ae_I_e_b - t_im_ab_I_j_m + v_ef_ab_t_ij_ef + t_mn_ab_I_ij_mn - t_mj_ae_I_ie_mb - I_ie_ma_t_mj_eb + t_mi_ea_I_ej_mb;
+    std::cout << "R: " << R(0, 0, 0, 0) << "\n";
     return R;
 }
 
-double calc_ccd_energy(btas::Tensor<double> const & t_oo_uu,btas::Tensor<double> const & v_oo_uu, int n, int nocc) {
+double calc_ccd_energy(btas::Tensor<double> const & t_oo_uu, btas::Tensor<double> const & v_oo_uu, int n, int nocc) {
     double ccd_e = 0.0;
     auto nuocc = n - nocc;
-    std::cout << "CCD t dims: " << t_oo_uu.extent(0) << t_oo_uu.extent(1) << t_oo_uu.extent(2) << t_oo_uu.extent(3) << std::endl;
-    std::cout << "v_oo_uu dims: " << v_oo_uu.extent(0) << v_oo_uu.extent(1) << v_oo_uu.extent(2) << v_oo_uu.extent(3) << std::endl;
+    //std::cout << "CCD t dims: " << t_oo_uu.extent(0) << t_oo_uu.extent(1) << t_oo_uu.extent(2) << t_oo_uu.extent(3) << std::endl;
+    //std::cout << "v_oo_uu dims: " << v_oo_uu.extent(0) << v_oo_uu.extent(1) << v_oo_uu.extent(2) << v_oo_uu.extent(3) << std::endl;
     //int pos_count = 0;
     //int neg_count = 0;
 
