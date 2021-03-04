@@ -1175,29 +1175,29 @@ btas::Tensor<double>
     btas::Tensor<double> R(nocc, nocc, nuocc, nuocc);
 
     //TODO: write each term in the sum (two permutations of indices plus v), then add and return
-    btas::Tensor<double> t_ij_ae_I_e_b; // first term in permutative equation
-    btas::contract(1.0, t, {1, 2, 3, 4}, I_u_u, {4, 5}, 0.0, t_ij_ae_I_e_b, {1, 2, 3, 5});
-    std::cout << "t_ij_ae_I_e_b: " << t_ij_ae_I_e_b(0, 0, 0, 0) << "\n";
+    btas::Tensor<double> t_oo_uu_I_u_u; // first term in permutative equation
+    btas::contract(1.0, t, {1, 2, 3, 4}, I_u_u, {4, 5}, 0.0, t_oo_uu_I_u_u, {1, 2, 3, 5});
+    std::cout << "t_ij_ae_I_e_b: " << t_oo_uu_I_u_u(0, 0, 0, 0) << "\n";
 
-    btas::Tensor<double> t_im_ab_I_j_m; // second term in permutative equation
-    btas::contract(1.0, t, {1, 2, 3, 4}, I_o_o, {5, 2}, 0.0, t_im_ab_I_j_m, {1, 5, 3, 4});
-    std::cout << "t_im_ab_I_j_m: " << t_im_ab_I_j_m(0, 0, 0, 0) << "\n";
+    btas::Tensor<double> t_oo_uu_I_o_o; // second term in permutative equation
+    btas::contract(1.0, t, {1, 2, 3, 4}, I_o_o, {5, 2}, 0.0, t_oo_uu_I_o_o, {1, 5, 3, 4});
+    std::cout << "t_im_ab_I_j_m: " << t_oo_uu_I_o_o(0, 0, 0, 0) << "\n";
 
-    btas::Tensor<double> v_ef_ab_t_ij_ef; // third term in permutative equation, note already scaled
-    btas::contract(0.5, v_uu_uu, {1, 2, 3, 4}, t, {5, 6, 1, 2}, 0.0, v_ef_ab_t_ij_ef, {5, 6, 3, 4});
-    std::cout << "v_ef_ab_t_ij_ef: " << v_ef_ab_t_ij_ef(0, 0, 0, 0) << "\n";
+    btas::Tensor<double> v_uu_uu_t_oo_uu; // third term in permutative equation, note already scaled
+    btas::contract(0.5, v_uu_uu, {1, 2, 3, 4}, t, {5, 6, 1, 2}, 0.0, v_uu_uu_t_oo_uu, {5, 6, 3, 4});
+    std::cout << "v_ef_ab_t_ij_ef: " << v_uu_uu_t_oo_uu(0, 0, 0, 0) << "\n";
 
-    btas::Tensor<double> t_mn_ab_I_ij_mn; // fourth term in permutative equation, note already scaled
-    btas::contract(0.5, t, {1, 2, 3, 4}, I_oo_oo, {5, 6, 1, 2}, 0.0, t_mn_ab_I_ij_mn, {5, 6, 3, 4});
-    std::cout << "t_mn_ab_I_ij_mn: " << t_mn_ab_I_ij_mn(0, 0, 0, 0) << "\n";
+    btas::Tensor<double> t_oo_uu_I_oo_oo; // fourth term in permutative equation, note already scaled
+    btas::contract(0.5, t, {1, 2, 3, 4}, I_oo_oo, {5, 6, 1, 2}, 0.0, t_oo_uu_I_oo_oo, {5, 6, 3, 4});
+    std::cout << "t_mn_ab_I_ij_mn: " << t_oo_uu_I_oo_oo(0, 0, 0, 0) << "\n";
 
-    btas::Tensor<double> t_mj_ae_I_ie_mb; // fifth term in permutative equation
-    btas::contract(1.0, t, {1, 2, 3, 4}, I_ou_ou, {5, 4, 1, 6}, 0.0, t_mj_ae_I_ie_mb, {5, 2, 3, 6});
-    std::cout << "t_mj_ae_I_ie_mb: " << t_mj_ae_I_ie_mb(0, 0, 0, 0) << "\n";
+    btas::Tensor<double> t_oo_uu_I_ou_ou; // fifth term in permutative equation
+    btas::contract(1.0, t, {1, 2, 3, 4}, I_ou_ou, {5, 4, 1, 6}, 0.0, t_oo_uu_I_ou_ou, {5, 2, 3, 6});
+    std::cout << "t_mj_ae_I_ie_mb: " << t_oo_uu_I_ou_ou(0, 0, 0, 0) << "\n";
 
-    btas::Tensor<double> I_ie_ma_t_mj_eb; // sixth term in permutative equation
-    btas::contract(1.0, I_ou_ou, {1, 2, 3, 4}, t, {3, 5, 2, 6}, 0.0, I_ie_ma_t_mj_eb, {1, 5, 4, 6});
-    std::cout << "I_ie_ma_t_mj_eb: " << I_ie_ma_t_mj_eb(0, 0, 0, 0) << "\n";
+    btas::Tensor<double> I_ou_ou_t_oo_uu; // sixth term in permutative equation
+    btas::contract(1.0, I_ou_ou, {1, 2, 3, 4}, t, {3, 5, 2, 6}, 0.0, I_ou_ou_t_oo_uu, {1, 5, 4, 6});
+    std::cout << "I_ie_ma_t_mj_eb: " << I_ou_ou_t_oo_uu(0, 0, 0, 0) << "\n";
 
     btas::Tensor<double> t_temp(nocc, nocc, nuocc, nuocc);
     for (int i = 0; i != nocc; ++i) {
@@ -1211,30 +1211,30 @@ btas::Tensor<double>
         }
     }
 
-    btas::Tensor<double> t_mi_ea_I_ej_mb; // seventh term in permutative equation
-    btas::contract(1.0, t_temp, {1, 2, 3, 4}, I_uo_ou, {3, 5, 1, 6}, 0.0, t_mi_ea_I_ej_mb, {2, 5, 4, 6});
-    std::cout << "t_mi_ea_I_ej_mb: " << t_mi_ea_I_ej_mb(0, 0, 0, 0) << "\n";
+    btas::Tensor<double> t_oo_uu_I_uo_ou; // seventh term in permutative equation
+    btas::contract(1.0, t_temp, {1, 2, 3, 4}, I_uo_ou, {3, 5, 1, 6}, 0.0, t_oo_uu_I_uo_ou, {2, 5, 4, 6});
+    std::cout << "t_mi_ea_I_ej_mb: " << t_oo_uu_I_uo_ou(0, 0, 0, 0) << "\n";
 
-    ccd_permute(t_ij_ae_I_e_b);
-    ccd_permute(t_im_ab_I_j_m);
-    ccd_permute(v_ef_ab_t_ij_ef);
-    ccd_permute(t_mn_ab_I_ij_mn);
-    ccd_permute(t_mj_ae_I_ie_mb);
-    ccd_permute(I_ie_ma_t_mj_eb);
-    ccd_permute(t_mi_ea_I_ej_mb);
+    ccd_permute(t_oo_uu_I_u_u);
+    ccd_permute(t_oo_uu_I_o_o);
+    ccd_permute(v_uu_uu_t_oo_uu);
+    ccd_permute(t_oo_uu_I_oo_oo);
+    ccd_permute(t_oo_uu_I_ou_ou);
+    ccd_permute(I_ou_ou_t_oo_uu);
+    ccd_permute(t_oo_uu_I_uo_ou);
 
-    std::cout << "t_ij_ae_I_e_b: " << t_ij_ae_I_e_b(0, 0, 0, 0) << "\n";
-    std::cout << "t_im_ab_I_j_m: " << t_im_ab_I_j_m(0, 0, 0, 0) << "\n";
-    std::cout << "v_ef_ab_t_ij_ef: " << v_ef_ab_t_ij_ef(0, 0, 0, 0) << "\n";
-    std::cout << "t_mn_ab_I_ij_mn: " << t_mn_ab_I_ij_mn(0, 0, 0, 0) << "\n";
-    std::cout << "t_mj_ae_I_ie_mb: " << t_mj_ae_I_ie_mb(0, 0, 0, 0) << "\n";
-    std::cout << "I_ie_ma_t_mj_eb: " << I_ie_ma_t_mj_eb(0, 0, 0, 0) << "\n";
-    std::cout << "t_mi_ea_I_ej_mb: " << t_mi_ea_I_ej_mb(0, 0, 0, 0) << "\n";
+    std::cout << "t_oo_uu_I_u_u: " << t_oo_uu_I_u_u(0, 0, 0, 0) << "\n";
+    std::cout << "t_oo_uu_I_o_o: " << t_oo_uu_I_o_o(0, 0, 0, 0) << "\n";
+    std::cout << "v_uu_uu_t_oo_uu: " << v_uu_uu_t_oo_uu(0, 0, 0, 0) << "\n";
+    std::cout << "t_oo_uu_I_oo_oo: " << t_oo_uu_I_oo_oo(0, 0, 0, 0) << "\n";
+    std::cout << "t_oo_uu_I_ou_ou: " << t_oo_uu_I_ou_ou(0, 0, 0, 0) << "\n";
+    std::cout << "I_ou_ou_t_oo_uu: " << I_ou_ou_t_oo_uu(0, 0, 0, 0) << "\n";
+    std::cout << "t_oo_uu_I_uo_ou: " << t_oo_uu_I_uo_ou(0, 0, 0, 0) << "\n";
 
-    std::cout << "Making R = " << v_oo_uu(0, 0, 0, 0) << " + " << t_ij_ae_I_e_b(0, 0, 0, 0) << " - " << t_im_ab_I_j_m(0, 0, 0, 0)
-        << " + " << v_ef_ab_t_ij_ef(0, 0, 0, 0) << " + " << t_mn_ab_I_ij_mn(0, 0, 0, 0) << " - " << t_mj_ae_I_ie_mb(0, 0, 0, 0)
-        << " - " << I_ie_ma_t_mj_eb(0, 0, 0, 0) << " + " << t_mi_ea_I_ej_mb(0, 0, 0, 0) << std::endl;
-    R = v_oo_uu + t_ij_ae_I_e_b - t_im_ab_I_j_m + v_ef_ab_t_ij_ef + t_mn_ab_I_ij_mn - t_mj_ae_I_ie_mb - I_ie_ma_t_mj_eb + t_mi_ea_I_ej_mb;
+    std::cout << "Making R = " << v_oo_uu(0, 0, 0, 0) << " + " << t_oo_uu_I_u_u(0, 0, 0, 0) << " - " << t_oo_uu_I_o_o(0, 0, 0, 0)
+              << " + " << v_uu_uu_t_oo_uu(0, 0, 0, 0) << " + " << t_oo_uu_I_oo_oo(0, 0, 0, 0) << " - " << t_oo_uu_I_ou_ou(0, 0, 0, 0)
+              << " - " << I_ou_ou_t_oo_uu(0, 0, 0, 0) << " + " << t_oo_uu_I_uo_ou(0, 0, 0, 0) << std::endl;
+    R = v_oo_uu + t_oo_uu_I_u_u - t_oo_uu_I_o_o + v_uu_uu_t_oo_uu + t_oo_uu_I_oo_oo - t_oo_uu_I_ou_ou - I_ou_ou_t_oo_uu + t_oo_uu_I_uo_ou;
     std::cout << "R: " << R(0, 0, 0, 0) << "\n";
     return R;
 }
