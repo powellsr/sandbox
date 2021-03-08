@@ -71,7 +71,7 @@ btas::Tensor<double> make_I_oo_oo(const btas::Tensor<double>& v_oo_oo, const bta
 btas::Tensor<double> make_I_o_o(const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n);
 btas::Tensor<double> make_I_u_u(const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n);
 double calc_ccd_energy(btas::Tensor<double> const & t_oo_uu, btas::Tensor<double> const & v_oo_uu, int n, int nocc);
-void ccd_permute(btas::Tensor<double>& tensor);
+btas::Tensor<double> ccd_permute(btas::Tensor<double>& tensor);
 //btas::Tensor<double> /*void*/ ccd_permute(btas::Tensor<double>& tensor);
 btas::Tensor<double> make_F_mo(const Matrix& C, const btas::Tensor<double>& F);
 
@@ -332,7 +332,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    const int max_cc_iter = 3; //300
+    const int max_cc_iter = 300; //300
     int cc_iter = 0;
     double ccd_energy = 0.0;
     double ccd_energy_last = 0.0;
@@ -430,7 +430,7 @@ int main(int argc, char *argv[]) {
                     for (int b = 0; b != nuocc; ++b) {
                         //std::cout << "Forming t: " << R(0, 0, 0, 0) << " / " << "(" << F_mo(i,i) <<
                             //" + " << F_mo(j,j) << " - " << F_mo(a + ndocc, a + ndocc) << " - " << F_mo(b + ndocc, b + ndocc) << ")\n";
-                        t_oo_uu(i, j, a, b) +=
+                        t_oo_uu(i, j, a, b) =
                                 R(i, j, a, b) / (F_mo(i, i) + F_mo(j, j) - F_mo(a + ndocc, a + ndocc) - F_mo(b + ndocc, b + ndocc));
                         std::cout << "t_oo_uu after R update: " << t_oo_uu(i, j, a, b) << std::endl;
                     }
@@ -1215,13 +1215,13 @@ btas::Tensor<double>
     btas::contract(1.0, t_temp, {1, 2, 3, 4}, I_uo_ou, {3, 5, 1, 6}, 0.0, t_oo_uu_I_uo_ou, {2, 5, 4, 6});
     std::cout << "t_mi_ea_I_ej_mb: " << t_oo_uu_I_uo_ou(0, 0, 0, 0) << "\n";
 
-    ccd_permute(t_oo_uu_I_u_u);
-    ccd_permute(t_oo_uu_I_o_o);
-    ccd_permute(v_uu_uu_t_oo_uu);
-    ccd_permute(t_oo_uu_I_oo_oo);
-    ccd_permute(t_oo_uu_I_ou_ou);
-    ccd_permute(I_ou_ou_t_oo_uu);
-    ccd_permute(t_oo_uu_I_uo_ou);
+    t_oo_uu_I_u_u = ccd_permute(t_oo_uu_I_u_u);
+    t_oo_uu_I_o_o = ccd_permute(t_oo_uu_I_o_o);
+    v_uu_uu_t_oo_uu = ccd_permute(v_uu_uu_t_oo_uu);
+    t_oo_uu_I_oo_oo = ccd_permute(t_oo_uu_I_oo_oo);
+    t_oo_uu_I_ou_ou = ccd_permute(t_oo_uu_I_ou_ou);
+    I_ou_ou_t_oo_uu = ccd_permute(I_ou_ou_t_oo_uu);
+    t_oo_uu_I_uo_ou = ccd_permute(t_oo_uu_I_uo_ou);
 
     std::cout << "t_oo_uu_I_u_u: " << t_oo_uu_I_u_u(0, 0, 0, 0) << "\n";
     std::cout << "t_oo_uu_I_o_o: " << t_oo_uu_I_o_o(0, 0, 0, 0) << "\n";
@@ -1266,49 +1266,19 @@ double calc_ccd_energy(btas::Tensor<double> const & t_oo_uu, btas::Tensor<double
     return ccd_e;
 }
 
-void ccd_permute(btas::Tensor<double>& tensor) {
-    //btas::Tensor<double> permuted(tensor.extent(0), tensor.extent(1), tensor.extent(2), tensor.extent(3));
-    double temp;
+btas::Tensor<double> ccd_permute(btas::Tensor<double>& tensor) {
+    btas::Tensor<double> permuted(tensor.extent(0), tensor.extent(1), tensor.extent(2), tensor.extent(3));
+
     for (int i = 0; i != tensor.extent(0); ++i) {
         for (int j = i; j != tensor.extent(1); ++j) {
             for (int a = 0; a != tensor.extent(2); ++a) {
                 for (int b = 0; b != tensor.extent(3); ++b) {
-                    if (i == j) {
-                        if (a == b) {
-                            //permuted(i, j, a, b) = tensor(i, j, a, b) * 2;
-                            tensor(i, j, a, b) *= 2;
-                        }
-                        else if (a > b) {
-                            temp = tensor(i, j, a, b);
-                            tensor(i, j, a, b) += tensor(j, i, b, a);
-                            tensor(j, i, b, a) += temp;
-                            //permuted(i, j, a, b) = tensor(i, j, a, b) + tensor(j, i, b, a);
-                            //permuted(j, i, b, a) = tensor(i, j, a, b) + tensor(j, i, b, a);
-                        }
-                    }
-                    else {
-                        temp = tensor(i, j, a, b);
-                        tensor(i, j, a, b) += tensor(j, i, b, a);
-                        tensor(j, i, b, a) += temp;
-                        //permuted(i, j, a, b) = tensor(i, j, a, b) + tensor(j, i, b, a);
-                        //permuted(j, i, b, a) = tensor(i, j, a, b) + tensor(j, i, b, a);
-                    }
+                    auto v = tensor(i, j, a, b) + tensor(j, i, b, a);
+                    permuted(i,j,a,b) = v;
+                    permuted(j,i,b,a) = v;
                 }
             }
         }
     }
-    /* //For testing purposes
-    for (int i = 0; i != tensor.extent(0); ++i) {
-        for (int j = 0; j != tensor.extent(1); ++j) {
-            for (int a = 0; a != tensor.extent(2); ++a) {
-                for (int b = 0; b != tensor.extent(3); ++b) {
-                    std::cout << tensor(i, j, a, b) << " ";
-                    if (tensor(i, j, a, b) != 2.0) {
-                        std::cout << "*" << i << j << a << b << "*";
-                    }
-                }
-            }
-        }
-        std::cout << std::endl;
-    }*/
+    return permuted;
 }
