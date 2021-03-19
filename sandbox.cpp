@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
     // read geometry from a file; by default read from h2o.xyz, else take filename (.xyz) from the command line
     const auto filename = (argc > 1) ? argv[1] : "h2.xyz"; // h2o.xyz
     std::vector<libint2::Atom> atoms = read_geometry(filename);
-	const auto basisname = (argc > 2) ? argv[2] : "6-31g"; //sto-3g //aug-cc-pVDZ
+	const auto basisname = (argc > 2) ? argv[2] : "sto-3g"; //sto-3g //aug-cc-pVDZ
 
     // count the number of electrons
     auto nelectron = 0;
@@ -191,7 +191,7 @@ int main(int argc, char *argv[]) {
     /*** =========================== ***/
 
     const auto maxiter = 300;
-    const auto conv = 1e-12;
+    const auto conv = 1e-10;
     auto iter = 0;
     auto rmsd = 0.0;
     auto ediff = 0.0;
@@ -254,6 +254,7 @@ int main(int argc, char *argv[]) {
 
     auto nuocc = nao - ndocc;
     auto n = nao;
+    std::cout << "N: " << n << " Ndocc: " << ndocc << " nuocc: " << nuocc << std::endl;
 
     //std::cout << "v_oo_oo:\n";
     btas::Tensor<double> v_oo_oo(ndocc, ndocc, ndocc, ndocc);
@@ -373,7 +374,7 @@ int main(int argc, char *argv[]) {
         t_oo_uu_prev = t_oo_uu;
         ccd_energy_last = ccd_energy;
 
-        I_uo_ou = make_I_uo_ou(v_uo_ou, v_uu_oo, t_oo_uu, ndocc, n);
+        I_uo_ou = make_I_uo_ou(v_ou_ou, v_uu_oo, t_oo_uu, ndocc, n);
         I_ou_ou = make_I_ou_ou(v_ou_ou, v_uu_oo, t_oo_uu, ndocc, n);
         I_oo_oo = make_I_oo_oo(v_oo_oo, v_uu_oo, t_oo_uu, ndocc, n);
         I_o_o = make_I_o_o(v_uu_oo, t_oo_uu, ndocc, n);
