@@ -65,7 +65,9 @@ btas::Tensor<double>
 calcResidual(const btas::Tensor<double>& v_oo_uu, const btas::Tensor<double>& v_uu_uu, const btas::Tensor<double>& t,
              const btas::Tensor<double>& I_u_u, const btas::Tensor<double>& I_o_o, const btas::Tensor<double>& I_oo_oo,
              const btas::Tensor<double>& I_ou_ou, const btas::Tensor<double>& I_uo_ou, const int n, const int nocc);
-btas::Tensor<double> make_I_uo_ou(const btas::Tensor<double>& v_uo_ou, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n);
+btas::Tensor<double> make_I_uo_ou(const btas::Tensor<double> &v_uo_ou, const btas::Tensor<double> &v_uu_oo,
+                                  const btas::Tensor<double> &v_ou_ou, const btas::Tensor<double> &t_oo_uu,
+                                  const int nocc, const int n);
 btas::Tensor<double> make_I_ou_ou(const btas::Tensor<double>& v_ou_ou, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n);
 btas::Tensor<double> make_I_oo_oo(const btas::Tensor<double>& v_oo_oo, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n);
 btas::Tensor<double> make_I_o_o(const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n);
@@ -374,7 +376,7 @@ int main(int argc, char *argv[]) {
         t_oo_uu_prev = t_oo_uu;
         ccd_energy_last = ccd_energy;
 
-        I_uo_ou = make_I_uo_ou(v_ou_ou, v_uu_oo, t_oo_uu, ndocc, n);
+        I_uo_ou = make_I_uo_ou(v_uo_ou, v_uu_oo, v_ou_ou, t_oo_uu, ndocc, n);
         I_ou_ou = make_I_ou_ou(v_ou_ou, v_uu_oo, t_oo_uu, ndocc, n);
         I_oo_oo = make_I_oo_oo(v_oo_oo, v_uu_oo, t_oo_uu, ndocc, n);
         I_o_o = make_I_o_o(v_uu_oo, t_oo_uu, ndocc, n);
@@ -1099,11 +1101,19 @@ btas::Tensor<double> make_I_ou_ou(const btas::Tensor<double>& v_ou_ou, const bta
     return I_ou_ou;
 }
 
-btas::Tensor<double> make_I_uo_ou(const btas::Tensor<double>& v_uo_ou, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& t_oo_uu, const int nocc, const int n) {
+btas::Tensor<double> make_I_uo_ou(const btas::Tensor<double> &v_uo_ou, const btas::Tensor<double> &v_uu_oo,
+                                  const btas::Tensor<double> &v_ou_ou, const btas::Tensor<double> &t_oo_uu,
+                                  const int nocc, const int n)
+                                   {
     int nuocc = n - nocc;
     btas::Tensor<double> I_uo_ou;
     btas::Tensor<double> vt_2ndterm;
-    btas::contract(0.5, v_uu_oo, {1, 2, 3, 4}, t_oo_uu, {3, 5, 6, 2}, 0.0, vt_2ndterm, {1, 5, 4, 6});
+    //btas::contract(0.5, v_uu_oo, {1, 2, 3, 4}, t_oo_uu, {5, 3, 6, 2}, 0.0, vt_2ndterm, {1, 5, 4, 6});
+    //btas::contract(0.5, v_uu_oo, {1, 2, 3, 4}, t_oo_uu, {5, 4, 6, 1}, 0.0, vt_2ndterm, {2, 5, 3, 6});
+    //btas::contract(0.5, v_uu_oo, {1, 2, 3, 4}, t_oo_uu, {4, 5, 1, 6}, 0.0, vt_2ndterm, {2, 5, 3, 6});
+
+    //btas::contract(0.5, v_ou_ou, {1, 2, 3, 4}, t_oo_uu, {5, 1, 6, 4}, 0.0, vt_2ndterm, {2, 5, 3, 6});
+    //btas::contract(0.5, v_uu_oo, {1, 2, 3, 4}, t_oo_uu, {3, 5, 6, 2}, 0.0, vt_2ndterm, {1, 5, 4, 6});
     btas::Tensor<double> t_temp(nocc, nocc, nuocc, nuocc);
     for (int i = 0; i != nocc; ++i) {
         for (int j = 0; j != nocc; ++j) {
@@ -1116,8 +1126,12 @@ btas::Tensor<double> make_I_uo_ou(const btas::Tensor<double>& v_uo_ou, const bta
     }
 
     btas::Tensor<double> vt_1stterm;
-    btas::contract(1.0, v_uu_oo, {1, 2, 3, 4}, t_temp, {4, 5, 2, 6}, 0.0, vt_1stterm, {1, 5, 3, 6});
+    btas::contract(1.0, v_uu_oo, {1, 2, 3, 4}, t_temp, {5, 4, 6, 1}, 0.0, vt_1stterm, {2, 5, 3, 6});
+    //std::cout << "v_uo_ou: " << v_uo_ou.extent(0) << v_uo_ou.extent(1) << v_uo_ou.extent(2) << v_uo_ou.extent(3) << std::endl;
+    //std::cout << "vt_1st: " << vt_1stterm.extent(0) << vt_1stterm.extent(1) << vt_1stterm.extent(2) << vt_1stterm.extent(3) << std::endl;
+    //std::cout << "vt_2nd: " << vt_2ndterm.extent(0) << vt_2ndterm.extent(1) << vt_2ndterm.extent(2) << vt_2ndterm.extent(3) << std::endl;
     I_uo_ou = v_uo_ou + vt_1stterm - vt_2ndterm;
+    //std::cout << "Nope\n";
     return I_uo_ou;
 }
 
