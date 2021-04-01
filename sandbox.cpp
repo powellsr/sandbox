@@ -382,49 +382,6 @@ int main(int argc, char *argv[]) {
         I_o_o = make_I_o_o(v_uu_oo, t_oo_uu, ndocc, n);
         I_u_u = make_I_u_u(v_uu_oo, t_oo_uu, ndocc, n);
 
-        //std::cout << "I_uo_ou:\n";
-        for (int a = 0; a != nuocc; ++a) {
-            for (int i = 0; i != ndocc; ++i) {
-                for (int j = 0; j != ndocc; ++j) {
-                    for (int b = 0; b != nuocc; ++b) {
-                        //std::cout << I_uo_ou(a, i, j, b) << " \n";
-                    }
-                }
-            }
-        }
-        //std::cout << "I_ou_ou:\n";
-        for (int a = 0; a != nuocc; ++a) {
-            for (int i = 0; i != ndocc; ++i) {
-                for (int j = 0; j != ndocc; ++j) {
-                    for (int b = 0; b != nuocc; ++b) {
-                        //std::cout << I_ou_ou(i, a, j, b) << " \n";
-                    }
-                }
-            }
-        }
-        //std::cout << "I_oo_oo:\n";
-        for (int i = 0; i != ndocc; ++i) {
-            for (int j = 0; j != ndocc; ++j) {
-                for (int k = 0; k != ndocc; ++k) {
-                    for (int l = 0; l != ndocc; ++l) {
-                        //std::cout << I_oo_oo(i, j, k, l) << " \n";
-                    }
-                }
-            }
-        }
-        //std::cout << "I_o_o:\n";
-        for (int i = 0; i != ndocc; ++i) {
-            for (int j = 0; j != ndocc; ++j) {
-                //std::cout << I_o_o(i, j) << " \n";
-            }
-        }
-        //std::cout << "I_u_u:\n";
-        for (int a = 0; a != ndocc; ++a) {
-            for (int b = 0; b != ndocc; ++b) {
-                //std::cout << I_u_u(a, b) << " \n";
-            }
-        }
-
         R = calcResidual(v_oo_uu, v_uu_uu, t_oo_uu, I_u_u, I_o_o, I_oo_oo, I_ou_ou, I_uo_ou, n, ndocc); // = R residual
 
         // update amplitudes
@@ -434,7 +391,6 @@ int main(int argc, char *argv[]) {
                     for (int b = 0; b != nuocc; ++b) {
                         t_oo_uu(i, j, a, b) =
                                 R(i, j, a, b) / (F_mo(i, i) + F_mo(j, j) - F_mo(a + ndocc, a + ndocc) - F_mo(b + ndocc, b + ndocc));
-                        //std::cout << "t_oo_uu after R update: " << t_oo_uu(i, j, a, b) << std::endl;
                     }
                 }
             }
@@ -454,24 +410,12 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
-        /*
-        for (int i = 0; i != ndocc; ++i) {
-            for (int j = 0; j != ndocc; ++j) {
-                for (int a = 0; a != nuocc; ++a) {
-                    for (int b = 0; b != nuocc; ++b) {
-                        std::cout << "*ijab*:" << i << j << a << b << " v=" << v_oo_uu(i, j, a, b) << " R="
-                                  << R(i, j, a, b) << std::endl;
-                    }
-                }
-            }
-        }*/
 
         ccd_energy = calc_ccd_energy(t_oo_uu, v_oo_uu, n, ndocc);
         std::cout << "CCD energy for iteration " << cc_iter << ": " << ccd_energy << std::endl;
 
         e_change = ccd_energy - ccd_energy_last;
         std::cout << "Energy change for iteration " << cc_iter << ": " << e_change << std::endl;
-        //rmsd = (t_ij_ab - t_ij_ab_last).
     } while (std::abs(e_change) > conv && cc_iter != max_cc_iter);
 
     printf("** Hartree-Fock energy = %20.12f\n", ehf + enuc);
@@ -937,8 +881,6 @@ btas::Tensor<double>
             C_ten(p, q) = C(p, q);
         }
     }
-
-    //std::cout << "C_ten size: " << C_ten.extent(0) << C_ten.extent(1) << std::endl;
 
     btas::Tensor<double> v_ga_aa;
     btas::contract(1.0, v_aa_aa, {1, 2, 3, 4}, C_ten, {1, 5}, 0.0, v_ga_aa, {5, 2, 3, 4});
