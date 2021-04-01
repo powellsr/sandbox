@@ -1108,12 +1108,7 @@ btas::Tensor<double> make_I_uo_ou(const btas::Tensor<double> &v_uo_ou, const bta
     int nuocc = n - nocc;
     btas::Tensor<double> I_uo_ou;
     btas::Tensor<double> vt_2ndterm;
-    //btas::contract(0.5, v_uu_oo, {1, 2, 3, 4}, t_oo_uu, {5, 3, 6, 2}, 0.0, vt_2ndterm, {1, 5, 4, 6});
-    //btas::contract(0.5, v_uu_oo, {1, 2, 3, 4}, t_oo_uu, {5, 4, 6, 1}, 0.0, vt_2ndterm, {2, 5, 3, 6});
-    //btas::contract(0.5, v_uu_oo, {1, 2, 3, 4}, t_oo_uu, {4, 5, 1, 6}, 0.0, vt_2ndterm, {2, 5, 3, 6});
-
-    //btas::contract(0.5, v_ou_ou, {1, 2, 3, 4}, t_oo_uu, {5, 1, 6, 4}, 0.0, vt_2ndterm, {2, 5, 3, 6});
-    //btas::contract(0.5, v_uu_oo, {1, 2, 3, 4}, t_oo_uu, {3, 5, 6, 2}, 0.0, vt_2ndterm, {1, 5, 4, 6});
+    btas::contract(0.5, v_uu_oo, {'e', 'b', 'i', 'm'}, t_oo_uu, {'j', 'm', 'a', 'e'}, 0.0, vt_2ndterm, {'b', 'j', 'i', 'a'});
     btas::Tensor<double> t_temp(nocc, nocc, nuocc, nuocc);
     for (int i = 0; i != nocc; ++i) {
         for (int j = 0; j != nocc; ++j) {
@@ -1126,12 +1121,8 @@ btas::Tensor<double> make_I_uo_ou(const btas::Tensor<double> &v_uo_ou, const bta
     }
 
     btas::Tensor<double> vt_1stterm;
-    btas::contract(1.0, v_uu_oo, {1, 2, 3, 4}, t_temp, {5, 4, 6, 1}, 0.0, vt_1stterm, {2, 5, 3, 6});
-    //std::cout << "v_uo_ou: " << v_uo_ou.extent(0) << v_uo_ou.extent(1) << v_uo_ou.extent(2) << v_uo_ou.extent(3) << std::endl;
-    //std::cout << "vt_1st: " << vt_1stterm.extent(0) << vt_1stterm.extent(1) << vt_1stterm.extent(2) << vt_1stterm.extent(3) << std::endl;
-    //std::cout << "vt_2nd: " << vt_2ndterm.extent(0) << vt_2ndterm.extent(1) << vt_2ndterm.extent(2) << vt_2ndterm.extent(3) << std::endl;
+    btas::contract(1.0, v_uu_oo, {'b', 'e', 'i', 'm'}, t_temp, {'m', 'j', 'e', 'a'}, 0.0, vt_1stterm, {'b', 'j', 'i', 'a'});
     I_uo_ou = v_uo_ou + vt_1stterm - vt_2ndterm;
-    //std::cout << "Nope\n";
     return I_uo_ou;
 }
 
@@ -1144,30 +1135,23 @@ btas::Tensor<double>
     int nuocc = n - nocc;
     btas::Tensor<double> R(nocc, nocc, nuocc, nuocc);
 
-    //TODO: write each term in the sum (two permutations of indices plus v), then add and return
     btas::Tensor<double> t_oo_uu_I_u_u; // first term in permutative equation
     btas::contract(1.0, t, {1, 2, 3, 4}, I_u_u, {4, 5}, 0.0, t_oo_uu_I_u_u, {1, 2, 3, 5});
-    //std::cout << "t_oo_uu_I_u_u: " << t_oo_uu_I_u_u(0, 0, 0, 0) << "\n";
 
     btas::Tensor<double> t_oo_uu_I_o_o; // second term in permutative equation
     btas::contract(1.0, t, {1, 2, 3, 4}, I_o_o, {5, 2}, 0.0, t_oo_uu_I_o_o, {1, 5, 3, 4});
-    //std::cout << "t_oo_uu_I_o_o: " << t_oo_uu_I_o_o(0, 0, 0, 0) << "\n";
 
     btas::Tensor<double> v_uu_uu_t_oo_uu; // third term in permutative equation, note already scaled
     btas::contract(0.5, v_uu_uu, {1, 2, 3, 4}, t, {5, 6, 1, 2}, 0.0, v_uu_uu_t_oo_uu, {5, 6, 3, 4});
-    //std::cout << "v_uu_uu_t_oo_uu: " << v_uu_uu_t_oo_uu(0, 0, 0, 0) << "\n";
 
     btas::Tensor<double> t_oo_uu_I_oo_oo; // fourth term in permutative equation, note already scaled
     btas::contract(0.5, t, {1, 2, 3, 4}, I_oo_oo, {5, 6, 1, 2}, 0.0, t_oo_uu_I_oo_oo, {5, 6, 3, 4});
-    //std::cout << "t_oo_uu_I_oo_oo: " << t_oo_uu_I_oo_oo(0, 0, 0, 0) << "\n";
 
     btas::Tensor<double> t_oo_uu_I_ou_ou; // fifth term in permutative equation
     btas::contract(1.0, t, {1, 2, 3, 4}, I_ou_ou, {5, 4, 1, 6}, 0.0, t_oo_uu_I_ou_ou, {5, 2, 3, 6});
-    //std::cout << "t_oo_uu_I_ou_ou: " << t_oo_uu_I_ou_ou(0, 0, 0, 0) << "\n";
 
     btas::Tensor<double> I_ou_ou_t_oo_uu; // sixth term in permutative equation
     btas::contract(1.0, I_ou_ou, {1, 2, 3, 4}, t, {3, 5, 2, 6}, 0.0, I_ou_ou_t_oo_uu, {1, 5, 4, 6});
-    //std::cout << "I_ou_ou_t_oo_uu: " << I_ou_ou_t_oo_uu(0, 0, 0, 0) << "\n";
 
     btas::Tensor<double> t_temp(nocc, nocc, nuocc, nuocc);
     for (int i = 0; i != nocc; ++i) {
@@ -1182,7 +1166,6 @@ btas::Tensor<double>
 
     btas::Tensor<double> t_oo_uu_I_uo_ou; // seventh term in permutative equation
     btas::contract(1.0, t_temp, {1, 2, 3, 4}, I_uo_ou, {3, 5, 1, 6}, 0.0, t_oo_uu_I_uo_ou, {2, 5, 4, 6});
-    //std::cout << "t_oo_uu_I_uo_ou: " << t_oo_uu_I_uo_ou(0, 0, 0, 0) << "\n";
 
     t_oo_uu_I_u_u = ccd_permute(t_oo_uu_I_u_u);
     t_oo_uu_I_o_o = ccd_permute(t_oo_uu_I_o_o);
@@ -1191,20 +1174,7 @@ btas::Tensor<double>
     t_oo_uu_I_ou_ou = ccd_permute(t_oo_uu_I_ou_ou);
     I_ou_ou_t_oo_uu = ccd_permute(I_ou_ou_t_oo_uu);
     t_oo_uu_I_uo_ou = ccd_permute(t_oo_uu_I_uo_ou);
-
-    //std::cout << "t_oo_uu_I_u_u: " << t_oo_uu_I_u_u(0, 0, 0, 0) << "\n";
-    //std::cout << "t_oo_uu_I_o_o: " << t_oo_uu_I_o_o(0, 0, 0, 0) << "\n";
-    //std::cout << "v_uu_uu_t_oo_uu: " << v_uu_uu_t_oo_uu(0, 0, 0, 0) << "\n";
-    //std::cout << "t_oo_uu_I_oo_oo: " << t_oo_uu_I_oo_oo(0, 0, 0, 0) << "\n";
-    //std::cout << "t_oo_uu_I_ou_ou: " << t_oo_uu_I_ou_ou(0, 0, 0, 0) << "\n";
-    //std::cout << "I_ou_ou_t_oo_uu: " << I_ou_ou_t_oo_uu(0, 0, 0, 0) << "\n";
-    //std::cout << "t_oo_uu_I_uo_ou: " << t_oo_uu_I_uo_ou(0, 0, 0, 0) << "\n";
-
-    //std::cout << "Making R = " << v_oo_uu(0, 0, 0, 0) << " + " << t_oo_uu_I_u_u(0, 0, 0, 0) << " - " << t_oo_uu_I_o_o(0, 0, 0, 0)
-    //          << " + " << v_uu_uu_t_oo_uu(0, 0, 0, 0) << " + " << t_oo_uu_I_oo_oo(0, 0, 0, 0) << " - " << t_oo_uu_I_ou_ou(0, 0, 0, 0)
-    //          << " - " << I_ou_ou_t_oo_uu(0, 0, 0, 0) << " + " << t_oo_uu_I_uo_ou(0, 0, 0, 0) << std::endl;
     R = v_oo_uu + t_oo_uu_I_u_u - t_oo_uu_I_o_o + v_uu_uu_t_oo_uu + t_oo_uu_I_oo_oo - t_oo_uu_I_ou_ou - I_ou_ou_t_oo_uu + t_oo_uu_I_uo_ou;
-    //std::cout << "R: " << R(0, 0, 0, 0) << "\n";
     return R;
 }
 
