@@ -1137,7 +1137,7 @@ double calc_ccd_energy(btas::Tensor<double> const & t_oo_uu, btas::Tensor<double
     return ccd_e;
 }
 
-btas::Tensor<double> h_j_i(const btas::Tensor<double>& fock_matrix, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& tau) {
+btas::Tensor<double> make_h_j_i(const btas::Tensor<double>& fock_matrix, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& tau) {
     btas::Tensor<double> v_temp(v_uu_oo.extent(0), v_uu_oo.extent(1), v_uu_oo.extent(2), v_uu_oo.extent(3));
     for (size_t a = 0; a != v_temp.extent(0); ++a) {
         for (size_t b = 0; b != v_temp.extent(1); ++b) {
@@ -1155,7 +1155,7 @@ btas::Tensor<double> h_j_i(const btas::Tensor<double>& fock_matrix, const btas::
     return fock_matrix + vTau;
 }
 
-btas::Tensor<double> h_b_a(const btas::Tensor<double>& fock_matrix, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& tau) {
+btas::Tensor<double> make_h_b_a(const btas::Tensor<double>& fock_matrix, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& tau) {
     btas::Tensor<double> v_temp(v_uu_oo.extent(0), v_uu_oo.extent(1), v_uu_oo.extent(2), v_uu_oo.extent(3));
     for (size_t a = 0; a != v_temp.extent(0); ++a) {
         for (size_t b = 0; b != v_temp.extent(1); ++b) {
@@ -1173,7 +1173,7 @@ btas::Tensor<double> h_b_a(const btas::Tensor<double>& fock_matrix, const btas::
     return fock_matrix - vTau;
 }
 
-btas::Tensor<double> h_b_i(const btas::Tensor<double>& fock_matrix, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& singles_amps) {
+btas::Tensor<double> make_h_b_i(const btas::Tensor<double>& fock_matrix, const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& singles_amps) {
     btas::Tensor<double> v_temp(v_uu_oo.extent(0), v_uu_oo.extent(1), v_uu_oo.extent(2), v_uu_oo.extent(3));
     for (size_t a = 0; a != v_temp.extent(0); ++a) {
         for (size_t b = 0; b != v_temp.extent(1); ++b) {
@@ -1191,7 +1191,47 @@ btas::Tensor<double> h_b_i(const btas::Tensor<double>& fock_matrix, const btas::
     return fock_matrix + vt;
 }
 
+btas::Tensor<double> make_g_j_i(const btas::Tensor<double>& h_j_i, const btas::Tensor<double>& fock_matrix,
+                                const btas::Tensor<double>& singles_amps, const btas::Tensor<double>& v_ou_oo) {
+    btas::Tensor<double> ft;
+    btas::contract(1.0, fock_matrix, {'a', 'i'}, singles_amps, {'u', 'a'}, 0.0, ft, {'u', 'i'});
 
+    btas::Tensor<double> v_temp(v_ou_oo.extent(0), v_ou_oo.extent(1), v_ou_oo.extent(2), v_ou_oo.extent(3));
+    for (size_t u = 0; u != v_ou_oo.extent(0); ++u) {
+        for (size_t a = 0; a != v_ou_oo.extent(1); ++a) {
+            for (size_t i = 0; i != v_ou_oo.extent(2); ++i) {
+                for (size_t j = 0; j != v_ou_oo.extent(3); ++j) {
+                    v_temp(u,a,i,j) = 2 * v_ou_oo(u,a,i,j) + v_ou_oo(u,a,j,i);
+                }
+            }
+        }
+    }
+    btas::Tensor<double> vt;
+    btas::contract(1.0, v_temp, {'u', 'a', 'i', 'j'}, singles_amps, {'j', 'a'}, 0.0, vt, {'u', 'i'});
+
+    return h_j_i + ft + vt;
+}
+
+btas::Tensor<double> make_g_b_a(const btas::Tensor<double>& h_b_a, const btas::Tensor<double>& fock_matrix,
+                                const btas::Tensor<double>& singles_amps, const btas::Tensor<double>& v_uu_uo) {
+    btas::Tensor<double> ft;
+    btas::contract(1.0, fock_matrix, {'a', 'i'}, singles_amps, {'i', 'B'}, 0.0, ft, {'a', 'b'});
+
+    btas::Tensor<double> v_temp(v_uu_uo.extent(0), v_uu_uo.extent(1), v_uu_uo.extent(2), v_uu_uo.extent(3));
+    for (size_t a = 0; a != v_uu_uo.extent(0); ++a) {
+        for (size_t b = 0; b != v_uu_uo.extent(1); ++b) {
+            for (size_t B = 0; B != v_uu_uo.extent(2); ++B) {
+                for (size_t i = 0; i != v_uu_uo.extent(3); ++i) {
+                    v_temp(a,b,B,i) = 2 * v_uu_uo(a,b,B,i) + v_uu_uo(b,a,B,i);
+                }
+            }
+        }
+    }
+    btas::Tensor<double> vt;
+    btas::contract(1.0, v_temp, {'a', 'b', 'B', 'i'}, singles_amps, {'i', 'b'}, 0.0, vt, {'a', 'B'});
+
+    return h_b_a - ft + vt;
+}
 
 btas::Tensor<double> ccd_permute(btas::Tensor<double>& tensor) {
     btas::Tensor<double> permuted(tensor.extent(0), tensor.extent(1), tensor.extent(2), tensor.extent(3));
