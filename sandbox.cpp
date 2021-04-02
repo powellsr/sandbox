@@ -336,6 +336,18 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // v_ou_oo
+    btas::Tensor<double> v_ou_oo(ndocc, nuocc, ndocc, ndocc);
+    for (size_t i = 0; i != ndocc; ++i) {
+        for (size_t a = 0; a != nuocc; ++a) {
+            for (size_t j = 0; j != ndocc; ++j) {
+                for (size_t k = 0; k != ndocc; ++k) {
+                    v_ou_oo(i,a,j,k) - v_gg_gg(i, a + ndocc, j, k);
+                }
+            }
+        }
+    }
+
     const int max_cc_iter = 300;
     int cc_iter = 0;
     double ccd_energy = 0.0;
@@ -1289,8 +1301,8 @@ btas::Tensor<double> make_j_ua_iB(const btas::Tensor<double>& v_ou_uo, const bta
 }
 
 btas::Tensor<double> make_k_ua_iB(const btas::Tensor<double>& v_ou_ou, const btas::Tensor<double>& v_uu_ou,
-    const btas::Tensor<double>& singles_amps, const btas::Tensor<double>& v_uu_oo,
-    const btas::Tensor<double>& T) {
+                                  const btas::Tensor<double>& singles_amps, const btas::Tensor<double>& v_uu_oo,
+                                  const btas::Tensor<double>& T) {
     btas::Tensor<double> vt1;
     btas::contract(1.0, v_ou_ou, {'u', 'a', 'i', 'j'}, singles_amps, {'j', 'B'}, 0.0, vt1, {'u', 'a', 'i', 'B'});
 
