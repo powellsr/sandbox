@@ -1233,6 +1233,76 @@ btas::Tensor<double> make_g_b_a(const btas::Tensor<double>& h_b_a, const btas::T
     return h_b_a - ft + vt;
 }
 
+btas::Tensor<double> make_a_uv_ij(const btas::Tensor<double>& v_oo_oo, const btas::Tensor<double>& v_ou_oo,
+                                  const btas::Tensor<double>& singles_amps, const btas::Tensor<double>& v_uo_oo,
+                                  const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& tau) {
+    btas::Tensor<double> vt1;
+    btas::contract(1.0, v_ou_oo, {'u', 'a', 'i', 'j'}, singles_amps, {'v', 'a'}, 0.0, vt1, {'u', 'v', 'i', 'j'});
+
+    btas::Tensor<double> vt2;
+    btas::contract(1.0, v_uo_oo, {'a', 'v', 'i', 'j'}, singles_amps, {'u', 'a'}, 0.0, vt2, {'u', 'v', 'i', 'j'});
+
+    btas::Tensor<double> vTau;
+    btas::contract(1.0, v_uu_oo, {'a', 'b', 'i', 'j'}, tau, {'u', 'v', 'a', 'b'}, 0.0, vTau, {'u', 'v', 'i', 'j'});
+
+    return v_oo_oo + vt1 + vt2 + vTau;
+}
+
+btas::Tensor<double> make_b_ab_BY(const btas::Tensor<double>& v_uu_uu, const btas::Tensor<double>& v_uu_uo,
+                                      const btas::Tensor<double>& singles_amps, const btas::Tensor<double>& v_uu_ou) {
+    btas::Tensor<double> vt1;
+    btas::contract(1.0, v_uu_uo, {'a', 'b', 'B', 'i'}, singles_amps, {'i', 'Y'}, 0.0, vt1, {'a', 'b', 'B', 'Y'});
+
+    btas::Tensor<double> vt2;
+    btas::contract(1.0, v_uu_ou, {'a', 'b', 'i', 'Y'}, singles_amps, {'i', 'B'}, 0.0, vt2, {'a', 'b', 'B', 'Y'});
+
+    return v_uu_uu + vt1 + vt2;
+}
+
+btas::Tensor<double> make_j_ua_iB(const btas::Tensor<double>& v_ou_uo, const btas::Tensor<double>& v_ou_oo,
+                                  const btas::Tensor<double>& single_amps, const btas::Tensor<double>& v_uu_uo,
+                                  const btas::Tensor<double>& v_uu_oo, const btas::Tensor<double>& T, const btas::Tensor<double>& doubles_amps) {
+    btas::Tensor<double> vt1;
+    btas::contract(1.0, v_ou_oo, {'u', 'a', 'j', 'i'}, singles_amps, {'j', 'B'}, 0.0, vt1, {'u', 'a', 'B', 'i'});
+
+    btas::Tensor<double> vt2;
+    btas::contract(1.0, v_uu_uo, {'b', 'a', 'B', 'i'}, singles_amps, {'u', 'b'}, 0.0, vt2, {'u', 'a', 'B', 'i'});
+
+    btas::Tensor<double> vT;
+    btas::contract(1.0, v_uu_oo, {'a', 'b', 'i', 'j'}, T, {'u', 'j', 'b', 'B'}, 0.0, vT, {'u', 'a', 'B', 'i'});
+
+    btas::Tensor<double> v_temp(v_uu_oo.extent(0), v_uu_oo.extent(1), v_uu_oo.extent(2), v_uu_oo.extent(3));
+    for (size_t a = 0; a != v_uu_oo.extent(0); ++a) {
+        for (size_t b = 0; b != v_uu_oo.extent(1); ++b) {
+            for (size_t i = 0; i != v_uu_oo.extent(2); ++i) {
+                for (size_t j = 0; j != v_uu_oo.extent(3); ++j) {
+                    v_temp(a,b,i,j) = 2 * v_uu_oo(a,b,i,j) - v_uu_oo(b,a,i,j);
+                }
+            }
+        }
+    }
+
+    btas::Tensor<double> vtd;
+    btas::contract(1.0, v_temp, {'a', 'b', 'i', 'j'}, doubles_amps, {'u', 'j', 'B', 'b'}, 0.0, vtd, {'u', 'a', 'B', 'i'});
+
+    return v_ou_uo - vt1 + vt2 - vT + vtd;
+}
+
+btas::Tensor<double> make_k_ua_iB(const btas::Tensor<double>& v_ou_ou, const btas::Tensor<double>& v_uu_ou,
+    const btas::Tensor<double>& singles_amps, const btas::Tensor<double>& v_uu_oo,
+    const btas::Tensor<double>& T) {
+    btas::Tensor<double> vt1;
+    btas::contract(1.0, v_ou_ou, {'u', 'a', 'i', 'j'}, singles_amps, {'j', 'B'}, 0.0, vt1, {'u', 'a', 'i', 'B'});
+
+    btas::Tensor<double> vt2;
+    btas::contract(1.0, v_uu_ou, {'b', 'a', 'i', 'B'}, singles_amps, {'u', 'b'}, 0.0, vt2, {'u', 'a', 'i', 'B'});
+
+    btas::Tensor<double> vT;
+    btas::contract(1.0, v_uu_oo, {'b', 'a', 'i', 'j'}, T, {'u', 'j', 'b', 'B'}, 0.0, vT, {'u', 'a', 'i', 'B'});
+
+    return v_ou_ou - vt1 + vt2 - vT;
+}
+
 btas::Tensor<double> ccd_permute(btas::Tensor<double>& tensor) {
     btas::Tensor<double> permuted(tensor.extent(0), tensor.extent(1), tensor.extent(2), tensor.extent(3));
     for (int i = 0; i != tensor.extent(0); ++i) {
