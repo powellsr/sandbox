@@ -342,7 +342,55 @@ int main(int argc, char *argv[]) {
         for (size_t a = 0; a != nuocc; ++a) {
             for (size_t j = 0; j != ndocc; ++j) {
                 for (size_t k = 0; k != ndocc; ++k) {
-                    v_ou_oo(i,a,j,k) - v_gg_gg(i, a + ndocc, j, k);
+                    v_ou_oo(i, a, j, k) = v_gg_gg(i, a + ndocc, j, k);
+                }
+            }
+        }
+    }
+
+    // v_uu_uo
+    btas::Tensor<double> v_uu_uo(nuocc, nuocc, nuocc, ndocc);
+    for (size_t a = 0; a != nuocc; ++a) {
+        for (size_t b = 0; b != nuocc; ++b) {
+            for (size_t c = 0; c != nuocc; ++c) {
+                for (size_t i = 0; i != ndocc; ++i) {
+                    v_uu_uo(a, b, c, i) = v_gg_gg(a + ndocc, b + ndocc, c + ndocc, i);
+                }
+            }
+        }
+    }
+
+    //v_uo_oo
+    btas::Tensor<double> v_uo_oo(nuocc, ndocc, ndocc, ndocc);
+    for (size_t a = 0; a != nuocc; ++a) {
+        for (size_t i = 0; i != ndocc; ++i) {
+            for (size_t j = 0; j != ndocc; ++j) {
+                for (size_t k = 0;  k != ndocc; ++k) {
+                    v_uo_oo(a, i, j, k) = v_gg_gg(a + ndocc, i, j, k);
+                }
+            }
+        }
+    }
+
+    // v_uu_ou
+    btas::Tensor<double> v_uu_ou(nuocc, nuocc, ndocc, nuocc);
+    for (size_t a = 0; a != nuocc; ++a) {
+        for (size_t b = 0; b != nuocc; ++b) {
+            for (size_t i = 0; i != ndocc; ++i) {
+                for (size_t c = 0; c != nuocc; ++c) {
+                    v_uu_ou(a, b, i, c) = v_gg_gg(a + ndocc, b + ndocc, i, c + ndocc);
+                }
+            }
+        }
+    }
+
+    // v_ou_uo
+    btas::Tensor<double> v_ou_uo(ndocc, nuocc, nuocc, ndocc);
+    for (size_t i = 0; i != ndocc; ++i) {
+        for (size_t a = 0; a != nuocc; ++a) {
+            for (size_t j = 0; j != ndocc; ++j) {
+                for (size_t b = 0; b != nuocc; ++b) {
+                    v_ou_uo(i, a, j, b) = v_gg_gg(i, a + ndocc, j, b + ndocc);
                 }
             }
         }
