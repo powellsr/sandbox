@@ -1426,7 +1426,7 @@ btas::Tensor<double> t1_residual(const btas::Tensor<double>& fock_matrix, const 
         for (size_t i = 0; i != v_uo_oo.extent(1); ++i) {
             for (size_t j = 0; j != v_uo_oo.extent(2); ++j) {
                 for (size_t k = 0; k != v_uo_oo.extent(3); ++k) {
-                    term8_int(a, b, i, j) = 2 * v_uo_oo(a, b, i, j) - v_uo_oo(a, b, j, i);
+                    term8_int(a, i, j, k) = 2 * v_uo_oo(a, i, j, k) - v_uo_oo(a, i, k, j);
                 }
             }
         }
