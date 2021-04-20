@@ -618,7 +618,7 @@ int main(int argc, char *argv[]) {
       for (int i = 0; i != ndocc; ++i) {
         for (int j = 0; j != ndocc; ++j) {
           for (int a = 0; a != nuocc; ++a) {
-            for (int b = 0; b != nuocc; ++b) { /// TODO
+            for (int b = 0; b != nuocc; ++b) {
               t_oo_uu(i, j, a, b) +=
                   R2(i, j, a, b) / (F_mo(i, i) + F_mo(j, j) - F_mo(a + ndocc, a + ndocc) - F_mo(b + ndocc, b + ndocc));
             }
@@ -1725,10 +1725,10 @@ t2_residual(const btas::Tensor<double> &v_oo_uu, const btas::Tensor<double> &a_o
 
 btas::Tensor<double> ccd_permute(btas::Tensor<double> &tensor) {
   btas::Tensor<double> permuted(tensor.extent(0), tensor.extent(1), tensor.extent(2), tensor.extent(3));
-  for (int i = 0; i != tensor.extent(0); ++i) {
-    for (int j = 0; j != tensor.extent(1); ++j) {
-      for (int a = 0; a != tensor.extent(2); ++a) {
-        for (int b = 0; b != tensor.extent(3); ++b) {
+  for (size_t i = 0; i != tensor.extent(0); ++i) {
+    for (size_t j = 0; j != tensor.extent(1); ++j) {
+      for (size_t a = 0; a != tensor.extent(2); ++a) {
+        for (size_t b = 0; b != tensor.extent(3); ++b) {
           auto v = tensor(i, j, a, b) + tensor(j, i, b, a);
           permuted(i, j, a, b) = v;
           permuted(j, i, b, a) = v;
@@ -1793,10 +1793,10 @@ btas::Tensor<double> make_T(const btas::Tensor<double> &doubles_amps, const btas
 
   btas::Tensor<double> doubles_copy(doubles_amps.extent(0), doubles_amps.extent(1), doubles_amps.extent(2),
                                     doubles_amps.extent(3));
-  for (int i = 0; i != doubles_amps.extent(0); ++i) {
-    for (int j = 0; j != doubles_amps.extent(1); ++j) {
-      for (int a = 0; a != doubles_amps.extent(2); ++a) {
-        for (int b = 0; b != doubles_amps.extent(3); ++b) {
+  for (size_t i = 0; i != doubles_amps.extent(0); ++i) {
+    for (size_t j = 0; j != doubles_amps.extent(1); ++j) {
+      for (size_t a = 0; a != doubles_amps.extent(2); ++a) {
+        for (size_t b = 0; b != doubles_amps.extent(3); ++b) {
           doubles_copy(i, j, a, b) = doubles_amps(i, j, a, b) * 0.5;
         }
       }
