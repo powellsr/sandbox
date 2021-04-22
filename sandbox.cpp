@@ -501,7 +501,6 @@ int main(int argc, char *argv[]) {
     double e_change;
     btas::Tensor<double> t_oo_uu_prev;
     btas::Tensor<double> t_o_u_prev;
-    rmsd = 0.0; //TODO: make independent variable for this?
     btas::Tensor<double> t_oo_uu(ndocc, ndocc, nuocc, nuocc);
     btas::Tensor<double> t_o_u(ndocc, nuocc);
     t_oo_uu.fill(0);
@@ -1576,8 +1575,8 @@ btas::Tensor<double> t1_residual(const btas::Tensor<double> &F_o_u, const btas::
   btas::contract(1.0, h_o_o, {'u', 'i'}, singles_amps, {'i', 'B'}, 0.0, term4, {'u', 'B'});
 
   btas::Tensor<double> singles_cont(nocc, nocc, nuocc, nuocc);
-  btas::contract(1.0, singles_amps, {'u', 'a'}, singles_amps, {'i', 'b'}, 0.0, singles_cont,
-                 {'u', 'i', 'a', 'b'}); // TODO: index ordering of result
+  btas::contract(1.0, singles_amps, {'u', 'a'}, singles_amps, {'i', 'B'}, 0.0, singles_cont,
+                 {'u', 'i', 'a', 'B'});
   btas::Tensor<double> term5_int(nocc, nocc, nuocc, nuocc);
   for (size_t i = 0; i != nocc; ++i) {
     for (size_t j = 0; j != nocc; ++j) {
@@ -1744,10 +1743,8 @@ btas::Tensor<double> ccd_permute(btas::Tensor<double> &tensor) {
 double calc_ccsd_energy(const btas::Tensor<double> &F_u_o, const btas::Tensor<double> &singles_amplitudes,
                         const btas::Tensor<double> &v_uu_oo, const btas::Tensor<double> &tau, const int ndocc, const int nuocc) {
   double ft = 0;
-  //btas::contract(2.0, fock_matrix, {'a', 'i'}, singles_amplitudes, {'i', 'a'}, 0.0, ft, {'e'}); /// Problem?
   for (size_t i = 0; i != ndocc; ++i) {
     for (size_t a = 0; a != nuocc; ++a) {
-//      std::cout << "F_u_o: " << F_u_o(a,i) << "\tsingles: " << singles_amplitudes(i,a) << "\t\ti = " << i << " a: " << a << std::endl;
       ft += F_u_o(a, i) * singles_amplitudes(i, a);
     }
   }
@@ -1764,24 +1761,17 @@ double calc_ccsd_energy(const btas::Tensor<double> &F_u_o, const btas::Tensor<do
   }
 
   double vTau = 0;
-  //btas::contract(1.0, v_temp, {'a', 'b', 'i', 'j'}, tau, {'i', 'j', 'a', 'b'}, 0.0, vTau, {'e'});
   for (size_t a = 0; a != nuocc; ++a) {
     for (size_t b = 0; b != nuocc; ++b) {
       for (size_t i = 0; i != ndocc; ++i) {
         for (size_t j = 0; j != ndocc; ++j) {
           vTau += v_temp(a, b, i, j) * tau(i, j, a, b);
-          //if (tau(i, j, a, b) != 0) std::cout << i << j << a << b << "\t" << tau(i,j,a,b) << std::endl;
         }
       }
     }
   }
   std::cout << "ft energy comp: " << ft << "\t vTau: " << vTau << std::endl;
 
-/*    btas::Tensor<double> ftT;
-    btas::Tensor<double> vTauT;
-    btas::contract(2.0, F_u_o, {'a', 'i'}, singles_amplitudes, {'i', 'a'}, 0.0, ftT, {'e'}); /// Problem?
-    btas::contract(1.0, v_temp, {'a', 'b', 'i', 'j'}, tau, {'i', 'j', 'a', 'b'}, 0.0, vTauT, {'e'});
-    return vTauT(0) + ftT(0);*/
   return (2.0 * ft) + vTau;
 }
 
@@ -1808,5 +1798,5 @@ btas::Tensor<double> make_T(const btas::Tensor<double> &doubles_amps, const btas
     }
   }
 
-  return singles_product + doubles_copy;//(0.5 * doubles_amps);
+  return singles_product + doubles_copy;
 }
