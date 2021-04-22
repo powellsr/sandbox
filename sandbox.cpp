@@ -494,7 +494,7 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    const int max_cc_iter = 300;
+    const int max_cc_iter = 50;
     int cc_iter = 0;
     double ccd_energy = 0.0;
     double ccd_energy_last = 0.0;
@@ -523,8 +523,8 @@ int main(int argc, char *argv[]) {
     btas::Tensor<double> b_uu_uu(nuocc, nuocc, nuocc, nuocc);
     btas::Tensor<double> j_ou_uo(ndocc, nuocc, nuocc, ndocc);
     btas::Tensor<double> k_ou_ou(ndocc, nuocc, ndocc, nuocc);
-    btas::Tensor<double> tau;
-    btas::Tensor<double> Tint;
+    btas::Tensor<double> tau = make_tau(t_oo_uu, t_o_u);
+    btas::Tensor<double> Tint = make_T(t_oo_uu, t_o_u);
     btas::Tensor<double> R1;
     btas::Tensor<double> R2;
 
@@ -537,20 +537,21 @@ int main(int argc, char *argv[]) {
     //std::cout << "F_mo:\n";
     auto F_mo = make_F_mo(C, Ften);
     //std::cout << F_mo.extent(0) << " " << F_mo.extent(1) << std::endl;
-/*
-    for (int i = 0; i != n; i++) {
-        for (int j = 0; j != n; j++) {
-            std::cout << F_mo(i,j) << "\t";
-        }
-        std::cout << std::endl;
-    }
-*/
+
+//    for (int i = 0; i != n; i++) {
+//        for (int j = 0; j != n; j++) {
+//            std::cout << F_mo(i,j) << "\t";
+//        }
+//        std::cout << std::endl;
+//    }
+
 
     btas::Tensor<double> F_u_o(nuocc, ndocc);
     btas::Tensor<double> F_o_o(ndocc, ndocc);
     btas::Tensor<double> F_u_u(nuocc, nuocc);
     btas::Tensor<double> F_o_u(ndocc, nuocc);
 
+    //std::cout << "F_u_o:\n";
     for (size_t a = 0; a != nuocc; ++a) {
       for (size_t i = 0; i != ndocc; ++i) {
         F_u_o(a, i) = F_mo(a + ndocc, i);
@@ -578,11 +579,12 @@ int main(int argc, char *argv[]) {
     /*** ============== ***/
     /***   CCSD loop    ***/
     /*** ============== ***/
-    std::cout << "Up to ccsd loop\n";
+
     do {
       ++cc_iter;
-//        t_oo_uu_prev = t_oo_uu;
+      t_oo_uu_prev = t_oo_uu;
 //        ccd_energy_last = ccd_energy;
+      ccsd_energy_last = ccsd_energy;
 
 /*        I_uo_ou = make_I_uo_ou(v_uo_ou, v_uu_oo, v_ou_ou, t_oo_uu, ndocc, n);
         I_ou_ou = make_I_ou_ou(v_ou_ou, v_uu_oo, t_oo_uu, ndocc, n);
@@ -591,35 +593,33 @@ int main(int argc, char *argv[]) {
         I_u_u = make_I_u_u(v_uu_oo, t_oo_uu, ndocc, n);*/
       //calcResidual(v_oo_uu, v_uu_uu, t_oo_uu, I_u_u, I_o_o, I_oo_oo, I_ou_ou, I_uo_ou, n, ndocc); // = R residual
 
-      tau = make_tau(t_oo_uu, t_o_u);
-      Tint = make_T(t_oo_uu, t_o_u);
-      std::cout << "T/tau intermediates\n";
+//      tau = make_tau(t_oo_uu, t_o_u);
+//      Tint = make_T(t_oo_uu, t_o_u);
+      //std::cout << "T/tau intermediates\n";
       h_u_u = make_h_u_u(F_u_u, v_uu_oo, tau, ndocc, nuocc);
       h_u_o = make_h_u_o(F_u_o, v_uu_oo, t_o_u, ndocc, nuocc);
       h_o_o = make_h_o_o(F_o_o, v_uu_oo, tau, ndocc, nuocc);
-      std::cout << "h intermediates\n";
+      //std::cout << "h intermediates\n";
       g_o_o = make_g_o_o(h_o_o, F_u_o, t_o_u, v_ou_oo, ndocc, nuocc);
       g_u_u = make_g_u_u(h_u_u, F_u_o, t_o_u, v_uu_uo, ndocc, nuocc);
-      std::cout << "g intermediates\n";
+      //std::cout << "g intermediates\n";
       a_oo_oo = make_a_oo_oo(v_oo_oo, v_ou_oo, t_o_u, v_uo_oo, v_uu_oo, tau);
       b_uu_uu = make_b_uu_uu(v_uu_uu, v_uu_uo, t_o_u, v_uu_ou);
-      std::cout << "a/b intermediates\n";
+      //std::cout << "a/b intermediates\n";
       j_ou_uo = make_j_ou_uo(v_ou_uo, v_ou_oo, t_o_u, v_uu_uo, v_uu_oo, Tint, t_oo_uu, ndocc, nuocc);
       k_ou_ou = make_k_ou_ou(v_ou_ou, v_ou_oo, v_uu_ou, t_o_u, v_uu_oo, Tint, ndocc, nuocc);
-      std::cout << "CCSD intermediates\n";
-
+      //std::cout << "CCSD intermediates\n";
       R1 = t1_residual(F_o_u, F_u_o, t_o_u, h_u_u, h_o_o, h_u_o, t_oo_uu, v_uo_ou, v_ou_ou, v_uu_ou, tau,
                        v_uo_oo, nuocc, ndocc);
-      std::cout << "CCSD residuals\n";
       R2 = t2_residual(v_oo_uu, a_oo_oo, tau, b_uu_uu, g_u_u, t_oo_uu, t_o_u, g_o_o, v_ou_uu, v_ou_ou, v_oo_uo,
                        v_ou_uo, j_ou_uo, k_ou_ou, nuocc, ndocc);
-      std::cout << "CCSD residuals\n";
+      //std::cout << "CCSD residuals\n";
       // update amplitudes
       for (int i = 0; i != ndocc; ++i) {
         for (int j = 0; j != ndocc; ++j) {
           for (int a = 0; a != nuocc; ++a) {
             for (int b = 0; b != nuocc; ++b) {
-              t_oo_uu(i, j, a, b) +=
+              t_oo_uu(i, j, a, b) += /*v_oo_uu(i,j,a,b) / (F_mo(i, i) + F_mo(j, j) - F_mo(a + ndocc, a + ndocc) - F_mo(b + ndocc, b + ndocc));*/
                   R2(i, j, a, b) / (F_mo(i, i) + F_mo(j, j) - F_mo(a + ndocc, a + ndocc) - F_mo(b + ndocc, b + ndocc));
             }
           }
@@ -627,7 +627,7 @@ int main(int argc, char *argv[]) {
       }
       for (int i = 0; i != ndocc; ++i) {
         for (int a = 0; a != nuocc; ++a) {
-          t_o_u(i, a) +=
+          t_o_u(i, a) += /*F_o_u(i,a) / (F_mo(i, i) - F_mo(a + ndocc, a + ndocc));*/
               R1(i, a) / (F_mo(i, i) - F_mo(a + ndocc, a + ndocc));
         }
       }
@@ -649,6 +649,8 @@ int main(int argc, char *argv[]) {
 
 /*        ccd_energy = calc_ccd_energy(t_oo_uu, v_oo_uu, n, ndocc);
         std::cout << "CCD energy for iteration " << cc_iter << ": " << ccd_energy << std::endl;*/
+      tau = make_tau(t_oo_uu, t_o_u);
+      Tint = make_T(t_oo_uu, t_o_u);
 
       ccsd_energy = calc_ccsd_energy(F_u_o, t_o_u, v_uu_oo, tau, ndocc, nuocc);
       std::cout << "CCSD energy for iteration " << cc_iter << ": " << ccsd_energy << std::endl;
@@ -662,9 +664,10 @@ int main(int argc, char *argv[]) {
     printf("** Hartree-Fock energy = %20.12f\n", ehf + enuc);
     //printf("** MP2 energy = %20.12f\n", emp2);
     //printf("** Total MP2 energy = %20.12f\n", ehf + enuc + emp2);
+    printf("** CCSD energy = %20.12f\n", ccsd_energy);
+    printf("** CCSD total energy = %20.12f\n", ehf + enuc + ccsd_energy);
 
     libint2::finalize(); // done with libint
-    std::cout << "End of try\n";
   } // end of try block; if any exceptions occurred, report them and exit cleanly
 
   catch (const char *ex) {
@@ -683,7 +686,6 @@ int main(int argc, char *argv[]) {
     cerr << "caught unknown exception\n";
     return 1;
   }
-  std::cout << "End of main\n";
   return 0;
 }
 
@@ -1582,7 +1584,7 @@ btas::Tensor<double> t1_residual(const btas::Tensor<double> &F_o_u, const btas::
       for (size_t a = 0; a != nuocc; ++a) {
         for (size_t b = 0; b != nuocc; ++b) {
           term5_int(i, j, a, b) = (2.0 * doubles_amps(i, j, a, b)) - doubles_amps(j, i, a, b) +
-                                  singles_cont(i, j, a, b); // Index ordering is weird
+                                  singles_cont(j, i, a, b); // Index ordering is weird
         }
       }
     }
@@ -1745,6 +1747,7 @@ double calc_ccsd_energy(const btas::Tensor<double> &F_u_o, const btas::Tensor<do
   //btas::contract(2.0, fock_matrix, {'a', 'i'}, singles_amplitudes, {'i', 'a'}, 0.0, ft, {'e'}); /// Problem?
   for (size_t i = 0; i != ndocc; ++i) {
     for (size_t a = 0; a != nuocc; ++a) {
+//      std::cout << "F_u_o: " << F_u_o(a,i) << "\tsingles: " << singles_amplitudes(i,a) << "\t\ti = " << i << " a: " << a << std::endl;
       ft += F_u_o(a, i) * singles_amplitudes(i, a);
     }
   }
@@ -1767,17 +1770,19 @@ double calc_ccsd_energy(const btas::Tensor<double> &F_u_o, const btas::Tensor<do
       for (size_t i = 0; i != ndocc; ++i) {
         for (size_t j = 0; j != ndocc; ++j) {
           vTau += v_temp(a, b, i, j) * tau(i, j, a, b);
+          //if (tau(i, j, a, b) != 0) std::cout << i << j << a << b << "\t" << tau(i,j,a,b) << std::endl;
         }
       }
     }
   }
+  std::cout << "ft energy comp: " << ft << "\t vTau: " << vTau << std::endl;
 
 /*    btas::Tensor<double> ftT;
     btas::Tensor<double> vTauT;
     btas::contract(2.0, F_u_o, {'a', 'i'}, singles_amplitudes, {'i', 'a'}, 0.0, ftT, {'e'}); /// Problem?
     btas::contract(1.0, v_temp, {'a', 'b', 'i', 'j'}, tau, {'i', 'j', 'a', 'b'}, 0.0, vTauT, {'e'});
     return vTauT(0) + ftT(0);*/
-  return (2.0 * ft) + vTau; // TODO: Clean up this return statement, data types? Extents of the tensors?
+  return (2.0 * ft) + vTau;
 }
 
 btas::Tensor<double> make_tau(const btas::Tensor<double> &doubles_amps, const btas::Tensor<double> &singles_amps) {
